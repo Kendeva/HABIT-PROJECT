@@ -2,6 +2,7 @@ from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
+import plotly.express as px
 import streamlit as st
 
 from utils.analytics import bill_summary, format_idr
@@ -11,61 +12,83 @@ from utils.maintenance_model import estimate_wait, train_maintenance_model
 from utils.rental_model import estimate_rent, train_rental_model
 
 BASE_DIR = Path(__file__).resolve().parent
+STYLE_PATH = BASE_DIR / "assets" / "style.css"
 
-st.set_page_config(page_title="HABIT", page_icon="🏠", layout="wide")
+st.set_page_config(
+    page_title="HABIT",
+    page_icon="🏠",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
-with open(BASE_DIR / "assets" / "style.css", "r", encoding="utf-8") as file:
-    st.markdown(f"<style>{file.read()}</style>", unsafe_allow_html=True)
+
+def load_css():
+    with STYLE_PATH.open("r", encoding="utf-8") as file:
+        st.markdown(f"<style>{file.read()}</style>", unsafe_allow_html=True)
 
 
-@st.cache_resource
+@st.cache_resource(show_spinner=False)
 def get_models():
-    rental_model = train_rental_model(load_rental_data())
-    energy_models = train_energy_models(load_energy_data())
-    maintenance_model = train_maintenance_model(load_maintenance_data())
+    rental_data = load_rental_data()
+    energy_data = load_energy_data()
+    maintenance_data = load_maintenance_data()
+
+    rental_model = train_rental_model(rental_data)
+    energy_models = train_energy_models(energy_data)
+    maintenance_model = train_maintenance_model(maintenance_data)
+
     return rental_model, energy_models, maintenance_model
 
 
+def show_header(title, subtitle):
+    st.markdown(
+        f"""
+        <div class="hero">
+            <div class="kicker">Smart living assistant</div>
+            <h1>{title}</h1>
+            <p>{subtitle}</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def show_home():
-    st.title("HABIT")
-    st.caption("A simple data-driven application for everyday living needs.")
-
-    st.subheader("Overview")
-    st.write(
-        "HABIT brings several common living-related tasks into one application. "
-        "Users can enter familiar information about housing, monthly expenses, "
-        "electricity usage, and maintenance conditions, then review the results "
-        "in a simple and readable form."
+    show_header(
+        "HABIT",
+        "A simple AI-powered assistant for everyday living decisions — from rent and bills to energy use and maintenance waiting time.",
     )
 
-    st.subheader("Features")
-    col1, col2 = st.columns(2)
+    st.markdown("### Living overview")
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Rent Tool", "Ready")
+    col2.metric("Bills Tool", "Ready")
+    col3.metric("Energy Check", "Ready")
+    col4.metric("Maintenance", "Ready")
 
-    with col1:
-        st.markdown("**Rental Estimate**")
-        st.write("Estimate a monthly rental range from basic property information.")
-
-        st.markdown("**Electricity Check**")
-        st.write("Check whether monthly electricity usage appears typical or unusual.")
-
-    with col2:
-        st.markdown("**Monthly Bills**")
-        st.write("Review regular expenses and see how monthly spending is distributed.")
-
-        st.markdown("**Maintenance Wait**")
-        st.write("Estimate waiting time using the conditions of a maintenance request.")
-
-    st.info(
-        "HABIT is a student portfolio project. Results are estimates and analytical "
-        "references, not official prices, diagnoses, or guaranteed service times."
+    st.markdown("")
+    st.markdown(
+        """
+        <div class="panel">
+        <strong>What you can do with HABIT</strong><br><br>
+        • Check whether a rental price looks reasonable.<br>
+        • Estimate a suitable rental price range.<br>
+        • Calculate and review monthly living expenses.<br>
+        • Check whether electricity usage looks typical or unusual.<br>
+        • Estimate maintenance waiting time based on current conditions.
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
 
-def show_rental(rental_model):
-    st.title("Rental Estimate")
-    st.caption("Enter property details to estimate a monthly rental range.")
+def show_rent_check(rental_model):
+    show_header(
+        "Rent Check",
+        "Enter basic property details and HABIT will estimate a reasonable monthly rent based on similar reference properties.",
+    )
 
-    with st.form("rental_form"):
+    with st.form("rent_form"):
         col1, col2 = st.columns(2)
 
         with col1:
@@ -97,130 +120,215 @@ def show_rental(rental_model):
             4_000_000,
             100_000,
         )
-        submitted = st.form_submit_button("Estimate Rent", use_container_width=True)
+        submitted = st.form_submit_button("Analyze Rent")
 
-    if submitted:
-        values = {
-            "area": area,
-            "property_type": property_type,
-            "bedrooms": bedrooms,
-            "bathrooms": bathrooms,
-            "size_m2": size_m2,
-            "furnished": furnished,
-            "listed_rent": listed_rent,
-        }
-        result = estimate_rent(rental_model, values)
+    if not submitted:
+        return
 
-        st.subheader("Result")
-        col1, col2 = st.columns(2)
-        col1.metric("Listed Rent", format_idr(listed_rent))
-        col2.metric(
-            "Estimated Range",
-            f"{format_idr(result['lower'])} - {format_idr(result['upper'])}",
+    values = {
+        "area": area,
+        "property_type": property_type,
+        "bedrooms": bedrooms,
+        "bathrooms": bathrooms,
+        "size_m2": size_m2,
+        "furnished": furnished,
+        "listed_rent": listed_rent,
+    }
+    result = estimate_rent(rental_model, values)
+
+    st.markdown(
+        f"""
+        <div class="result-hero">
+            <div class="result-label">Rental price status</div>
+            <div class="result-value">{result['status']}</div>
+            <div class="result-note">
+                HABIT compares this listing with rental patterns learned from the reference dataset.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    col1, col2 = st.columns([1, 1.7])
+    col1.metric("Listed Rent", format_idr(listed_rent))
+
+    with col2:
+        st.markdown(
+            f"""
+            <div class="rent-range-card">
+                <div class="rent-range-label">Recommended Monthly Range</div>
+                <div class="rent-range-value">
+                    {format_idr(result['lower'])} – {format_idr(result['upper'])}
+                </div>
+                <div class="rent-range-note">
+                    Based on similar property patterns in the reference dataset.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
 
-        difference = result["difference_pct"]
-        if result["status"] == "Above Estimated Range":
-            st.info(f"The listed rent is about {difference:.1f}% above the estimated range.")
-        elif result["status"] == "Below Estimated Range":
-            st.info(f"The listed rent is about {difference:.1f}% below the estimated range.")
-        else:
-            st.success("The listed rent is within the estimated range.")
+    difference = result["difference_pct"]
+    if result["status"] == "Higher Than Recommended":
+        st.info(
+            f"The listed rent is about {difference:.1f}% higher than the top of the recommended range "
+            f"({format_idr(result['upper'])})."
+        )
+    elif result["status"] == "Lower Than Recommended":
+        st.info(
+            f"The listed rent is about {difference:.1f}% lower than the bottom of the recommended range "
+            f"({format_idr(result['lower'])})."
+        )
+    else:
+        st.success("The listed rent falls within HABIT's recommended monthly range.")
 
 
-def show_bills():
-    st.title("Monthly Bills")
-    st.caption("Enter your regular monthly expenses to review the spending distribution.")
+def show_monthly_bills():
+    show_header(
+        "Monthly Bills",
+        "Add your regular monthly costs and HABIT will summarize where your living expenses go.",
+    )
 
-    with st.form("bills_form"):
-        st.markdown("#### Monthly Expenses")
-        col1, col2 = st.columns(2)
+    col1, col2 = st.columns(2)
+    with col1:
+        rent = st.number_input("Rent", 0, 50_000_000, 4_000_000, 100_000)
+        electricity = st.number_input("Electricity", 0, 10_000_000, 400_000, 50_000)
+        water = st.number_input("Water", 0, 5_000_000, 100_000, 25_000)
 
-        with col1:
-            rent = st.number_input("Rent", 0, 50_000_000, 4_000_000, 100_000)
-            electricity = st.number_input("Electricity", 0, 10_000_000, 400_000, 50_000)
-            water = st.number_input("Water", 0, 5_000_000, 100_000, 25_000)
+    with col2:
+        internet = st.number_input("Internet", 0, 5_000_000, 350_000, 50_000)
+        other = st.number_input("Other", 0, 10_000_000, 150_000, 50_000)
 
-        with col2:
-            internet = st.number_input("Internet", 0, 5_000_000, 350_000, 50_000)
-            other = st.number_input("Other", 0, 10_000_000, 150_000, 50_000)
+    if not st.button("Calculate Monthly Cost"):
+        return
 
-        submitted = st.form_submit_button("Analyze Bills", use_container_width=True)
+    result = bill_summary(rent, electricity, water, internet, other)
 
-    if submitted:
-        result = bill_summary(rent, electricity, water, internet, other)
+    st.markdown(
+        f"""
+        <div class="result-hero">
+            <div class="result-label">Estimated monthly living cost</div>
+            <div class="result-value">{format_idr(result['total'])}</div>
+            <div class="result-note">Largest expense category: {result['largest']}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-        st.subheader("Summary")
-        col1, col2 = st.columns(2)
-        col1.metric("Total Monthly Cost", format_idr(result["total"]))
-        col2.metric("Largest Expense", result["largest"])
+    chart_data = pd.DataFrame(
+        {
+            "Category": list(result["values"].keys()),
+            "Amount": list(result["values"].values()),
+        }
+    )
 
-        st.markdown("#### Expense Distribution")
-        chart_data = pd.DataFrame(
-            {
-                "Category": result["values"].keys(),
-                "Amount": result["values"].values(),
-            }
-        ).set_index("Category")
-        st.bar_chart(chart_data)
+    chart = px.bar(chart_data, x="Category", y="Amount", text_auto=".2s")
+    chart.update_traces(marker_color="#47655a")
+    chart.update_layout(
+        height=360,
+        showlegend=False,
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(255,255,255,.65)",
+        yaxis_title="Rp",
+        xaxis_title="",
+    )
+    st.plotly_chart(chart, use_container_width=True)
 
 
-def show_energy(energy_models):
-    st.title("Electricity Check")
-    st.caption("Check whether your monthly electricity usage appears typical or unusual.")
+def show_energy_usage(energy_models):
+    show_header(
+        "Energy Usage",
+        "Enter your household profile and monthly electricity usage. HABIT will check whether the usage looks typical or unusual.",
+    )
 
     with st.form("energy_form"):
         col1, col2 = st.columns(2)
 
         with col1:
             residents = st.number_input("Residents", 1, 10, 2)
-            home_type = st.selectbox("Home type", ["Boarding Room", "Apartment", "House"])
-            month = st.selectbox("Month", list(range(1, 13)), index=datetime.now().month - 1)
+            home_type = st.selectbox(
+                "Home type",
+                ["Boarding Room", "Apartment", "House"],
+            )
+            month = st.selectbox(
+                "Month",
+                list(range(1, 13)),
+                index=datetime.now().month - 1,
+            )
 
         with col2:
-            ac_hours = st.number_input("Average AC use per day (hours)", 0.0, 24.0, 4.0, 0.5)
-            usage = st.number_input("Monthly electricity usage (kWh)", 1.0, 3000.0, 150.0, 1.0)
+            ac_hours = st.number_input(
+                "Average AC use per day (hours)",
+                0.0,
+                24.0,
+                4.0,
+                0.5,
+            )
+            usage = st.number_input(
+                "Monthly electricity usage (kWh)",
+                1.0,
+                3000.0,
+                150.0,
+                1.0,
+            )
 
-        submitted = st.form_submit_button("Check Usage", use_container_width=True)
+        submitted = st.form_submit_button("Check Energy Usage")
 
-    if submitted:
-        regression_model, anomaly_preprocessor, anomaly_model = energy_models
-        result = analyze_energy(
-            regression_model,
-            anomaly_preprocessor,
-            anomaly_model,
-            {
-                "residents": residents,
-                "home_type": home_type,
-                "month": month,
-                "ac_hours_per_day": ac_hours,
-                "monthly_usage_kwh": usage,
-            },
-        )
+    if not submitted:
+        return
 
-        st.subheader("Result")
-        st.write(f"**Status:** {result['status']}")
+    regression_model, anomaly_preprocessor, anomaly_model = energy_models
+    result = analyze_energy(
+        regression_model,
+        anomaly_preprocessor,
+        anomaly_model,
+        {
+            "residents": residents,
+            "home_type": home_type,
+            "month": month,
+            "ac_hours_per_day": ac_hours,
+            "monthly_usage_kwh": usage,
+        },
+    )
 
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Your Usage", f"{usage:.1f} kWh")
-        col2.metric("Expected Usage", f"{result['expected']:.1f} kWh")
-        col3.metric("Typical Range", f"{result['lower']:.0f} - {result['upper']:.0f} kWh")
+    st.markdown(
+        f"""
+        <div class="result-hero">
+            <div class="result-label">Energy usage status</div>
+            <div class="result-value">{result['status']}</div>
+            <div class="result-note">
+                Isolation Forest checks whether this usage pattern differs from similar reference observations.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-        difference = result["difference_pct"]
-        direction = "above" if difference >= 0 else "below"
-        st.info(
-            f"Your usage is about {abs(difference):.1f}% {direction} the expected usage "
-            "for a similar household profile."
-        )
-        st.caption(
-            f"Anomaly score: {result['anomaly_score']:.3f}. "
-            "This score is not a probability or an electrical diagnosis."
-        )
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Your Usage", f"{usage:.1f} kWh")
+    col2.metric("Expected Usage", f"{result['expected']:.1f} kWh")
+    col3.metric(
+        "Typical Range",
+        f"{result['lower']:.0f}–{result['upper']:.0f} kWh",
+    )
+
+    difference = result["difference_pct"]
+    direction = "above" if difference >= 0 else "below"
+    st.info(
+        f"Your entered usage is about {abs(difference):.1f}% {direction} "
+        "the expected usage for a similar household profile."
+    )
+    st.caption(
+        f"Anomaly score: {result['anomaly_score']:.3f}. "
+        "This score is not a probability and does not diagnose electrical problems."
+    )
 
 
 def show_maintenance(maintenance_model):
-    st.title("Maintenance Wait")
-    st.caption("Estimate waiting time based on request and service conditions.")
+    show_header(
+        "Maintenance",
+        "Estimate how long a maintenance request may take based on queue conditions, request type, and technician availability.",
+    )
 
     with st.form("maintenance_form"):
         col1, col2 = st.columns(2)
@@ -228,7 +336,14 @@ def show_maintenance(maintenance_model):
         with col1:
             issue_type = st.selectbox(
                 "Issue type",
-                ["Air Conditioner", "Plumbing", "Electricity", "Internet", "Door/Lock", "Other"],
+                [
+                    "Air Conditioner",
+                    "Plumbing",
+                    "Electricity",
+                    "Internet",
+                    "Door/Lock",
+                    "Other",
+                ],
             )
             priority = st.selectbox("Priority", ["Low", "Normal", "High"], index=1)
             queue_length = st.number_input("Requests ahead", 0, 30, 4)
@@ -250,94 +365,103 @@ def show_maintenance(maintenance_model):
                 format_func=lambda day: day[1],
             )
 
-        submitted = st.form_submit_button("Estimate Wait", use_container_width=True)
+        submitted = st.form_submit_button("Estimate Waiting Time")
 
-    if submitted:
-        result = estimate_wait(
-            maintenance_model,
-            {
-                "issue_type": issue_type,
-                "priority": priority,
-                "queue_length": queue_length,
-                "technicians_available": technicians,
-                "request_hour": request_hour,
-                "day_of_week": day_of_week[0],
-            },
-        )
+    if not submitted:
+        return
 
-        st.subheader("Result")
-        col1, col2 = st.columns(2)
-        col1.metric("Estimated Time", f"{result['minutes']:.0f} minutes")
-        col2.metric("Estimated Range", f"{result['low']:.0f} - {result['high']:.0f} minutes")
-        st.write(result["label"])
-        st.caption("This is an estimate, not a guaranteed service time.")
+    result = estimate_wait(
+        maintenance_model,
+        {
+            "issue_type": issue_type,
+            "priority": priority,
+            "queue_length": queue_length,
+            "technicians_available": technicians,
+            "request_hour": request_hour,
+            "day_of_week": day_of_week[0],
+        },
+    )
+
+    st.markdown(
+        f"""
+        <div class="result-hero">
+            <div class="result-label">Estimated waiting time</div>
+            <div class="result-value">{result['minutes']:.0f} minutes</div>
+            <div class="result-note">
+                {result['label']} based on similar historical maintenance conditions.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.metric(
+        "Estimated Range",
+        f"{result['low']:.0f}–{result['high']:.0f} minutes",
+    )
+    st.caption("This is an estimate, not a guaranteed service time.")
 
 
 def show_about():
-    st.title("About HABIT")
-    st.caption("A student project that applies data analysis and basic Machine Learning to everyday living needs.")
-
-    st.subheader("Project Overview")
-    st.write(
-        "HABIT was developed to bring several common living-related tasks into one simple interface. "
-        "Instead of working directly with datasets or Machine Learning settings, users provide familiar "
-        "information and receive results that are easier to understand."
+    show_header(
+        "About HABIT",
+        "A smart living assistant designed to make everyday housing decisions easier to understand.",
     )
+    st.markdown(
+        """
+        HABIT is a student-built application that brings several common living needs into one simple interface.
+        Instead of asking users to work with raw datasets or Machine Learning settings, HABIT lets users enter
+        familiar information such as rental details, monthly expenses, electricity usage, or maintenance conditions
+        and then presents the result in a form that is easier to understand.
 
-    st.subheader("What the Application Covers")
-    st.write(
-        "The application can estimate a rental range, summarize monthly bills, check unusual electricity "
-        "usage, and estimate maintenance waiting time. Each feature focuses on a different type of everyday "
-        "information while keeping the interaction simple."
-    )
+        Machine Learning works behind the application to support rental price estimation, unusual electricity usage
+        detection, and maintenance waiting-time estimation. The Monthly Bills feature uses straightforward data
+        analytics to help users understand how their regular living expenses are distributed.
 
-    st.subheader("Machine Learning and Data Analytics")
-    st.write(
-        "Rental estimation, electricity checking, and maintenance waiting-time estimation use basic "
-        "Machine Learning models. Monthly Bills uses straightforward data analytics to calculate totals, "
-        "compare expense categories, and show spending distribution."
-    )
-
-    st.subheader("Project Purpose")
-    st.write(
-        "HABIT was created as an educational portfolio project to practice Python, Streamlit, data processing, "
-        "basic Machine Learning, and simple data visualization in one application. The focus is on applying "
-        "these concepts to practical examples rather than building a commercial product."
-    )
-
-    st.info(
-        "HABIT is intended for learning and demonstration purposes. Its results should be treated as "
-        "estimates and analytical references, not official market values, professional electrical diagnoses, "
-        "or guaranteed maintenance service times."
+        HABIT is designed as an educational portfolio project, so its results should be treated as helpful estimates
+        and analytical references rather than official market prices, electrical diagnoses, or guaranteed service times.
+        """
     )
 
 
-rental_model, energy_models, maintenance_model = get_models()
+def main():
+    load_css()
+    rental_model, energy_models, maintenance_model = get_models()
 
-st.sidebar.title("HABIT")
-st.sidebar.caption("Simple living data application")
+    st.sidebar.markdown(
+        """
+        <div class="habit-brand">
+            <div class="habit-name">HABIT</div>
+            <div class="habit-sub">Smart living assistant</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-page = st.sidebar.radio(
-    "Navigation",
-    [
-        "Home",
-        "Rental Estimate",
-        "Monthly Bills",
-        "Electricity Check",
-        "Maintenance Wait",
-        "About",
-    ],
-)
+    page = st.sidebar.radio(
+        "Navigation",
+        [
+            "Home",
+            "Rent Check",
+            "Monthly Bills",
+            "Energy Usage",
+            "Maintenance",
+            "About",
+        ],
+    )
 
-if page == "Home":
-    show_home()
-elif page == "Rental Estimate":
-    show_rental(rental_model)
-elif page == "Monthly Bills":
-    show_bills()
-elif page == "Electricity Check":
-    show_energy(energy_models)
-elif page == "Maintenance Wait":
-    show_maintenance(maintenance_model)
-else:
-    show_about()
+    if page == "Home":
+        show_home()
+    elif page == "Rent Check":
+        show_rent_check(rental_model)
+    elif page == "Monthly Bills":
+        show_monthly_bills()
+    elif page == "Energy Usage":
+        show_energy_usage(energy_models)
+    elif page == "Maintenance":
+        show_maintenance(maintenance_model)
+    else:
+        show_about()
+
+
+if __name__ == "__main__":
+    main()

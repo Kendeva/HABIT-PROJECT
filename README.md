@@ -1,57 +1,19 @@
 # HABIT
 
-HABIT is a data-driven student project that brings several everyday living needs into one practical application. It helps users explore rental price estimates, monthly expense distribution, unusual electricity usage patterns, and estimated maintenance waiting times through a simple Streamlit interface.
+HABIT is a student portfolio project that uses Machine Learning and simple data analytics to support everyday housing decisions. The application helps users review rental prices, summarize monthly bills, check electricity usage patterns, and estimate maintenance waiting time.
 
 > Computer Science Portfolio Project — Semester 5
 
-## Overview
+## Project Objective
 
-HABIT is designed to make several living-related data tasks easier to understand without requiring users to work directly with datasets or Machine Learning settings. Users enter familiar information related to housing, expenses, electricity usage, or maintenance conditions, and the application presents the result as an estimate or analytical reference.
+The main goal of HABIT is to explore how simple Machine Learning models can be applied to common living and housing problems. The project focuses on creating a practical application that is easy to understand, while still showing the basic workflow of data processing, model training, prediction, and visualization.
 
 ## Features
 
-### Rental Price Estimation
-
-Uses property information such as area, property type, room details, size, and furnishing status to estimate a monthly rental range. The entered listing price can then be compared with that estimated range.
-
-### Monthly Bills Analysis
-
-Summarizes regular monthly expenses such as rent, electricity, water, internet, and other costs. It also shows the expense distribution so users can see which category contributes the most to their monthly spending.
-
-### Electricity Usage Detection
-
-Uses household information and monthly electricity usage to compare the entered consumption with an expected usage value and identify patterns that appear typical or unusual in relation to the reference data.
-
-### Maintenance Waiting-Time Estimation
-
-Estimates how long a maintenance request may take based on information such as issue type, priority, queue length, technician availability, request hour, and day of the week.
-
-## Machine Learning and Data Analytics
-
-HABIT uses simple Machine Learning and data analytics approaches that match the needs of each feature:
-
-| Feature | Method |
-|---|---|
-| Rental Price Estimation | Random Forest Regressor |
-| Monthly Bills Analysis | Basic Data Analytics |
-| Electricity Usage Detection | Random Forest Regressor + Isolation Forest |
-| Maintenance Waiting-Time Estimation | Random Forest Regressor |
-
-The Machine Learning flow remains straightforward: load the reference data, prepare the required numerical and categorical features, train the model, process user input, and display the result. The electricity feature also uses Isolation Forest to help detect unusual consumption patterns.
-
-## Project Purpose
-
-HABIT was developed as an educational portfolio project to demonstrate how Machine Learning and data analysis can be applied to practical everyday living problems. The focus is on building a clean and understandable student project that connects data processing, basic Machine Learning, analysis, visualization, and a user interface.
-
-## Dataset
-
-The project uses three synthetic reference datasets for learning and demonstration purposes:
-
-- `data/rental_reference.csv`
-- `data/energy_reference.csv`
-- `data/maintenance_reference.csv`
-
-These datasets are not official property-market, electricity-provider, or maintenance-company data.
+- **Rent Check** — estimates a reasonable monthly rental range and compares it with the listed rent.
+- **Monthly Bills** — calculates total monthly living expenses and shows the expense distribution in a chart.
+- **Energy Usage** — compares entered electricity usage with an expected value and checks for unusual usage patterns.
+- **Maintenance** — estimates maintenance waiting time from queue conditions, request type, and technician availability.
 
 ## Technologies
 
@@ -59,6 +21,40 @@ These datasets are not official property-market, electricity-provider, or mainte
 - Streamlit
 - Pandas
 - Scikit-learn
+- Plotly
+
+## Machine Learning
+
+| Feature | Method |
+|---|---|
+| Rent Check | Random Forest Regressor |
+| Energy Usage | Random Forest Regressor + Isolation Forest |
+| Maintenance | Random Forest Regressor |
+| Monthly Bills | Basic Data Analytics |
+
+## How It Works
+
+HABIT uses a simple workflow for each Machine Learning feature:
+
+1. Load the reference dataset.
+2. Separate numerical and categorical features.
+3. Encode categorical values using `OneHotEncoder`.
+4. Train the required model when the application starts.
+5. Accept input from the user through Streamlit.
+6. Process the input and generate an estimate or analysis result.
+7. Display the result in a simple and readable format.
+
+The Energy Usage feature also uses Isolation Forest to check whether the entered electricity usage pattern appears typical or unusual compared with the reference data.
+
+## Dataset
+
+HABIT currently uses three synthetic reference datasets created for educational and demonstration purposes:
+
+- `data/rental_reference.csv`
+- `data/energy_reference.csv`
+- `data/maintenance_reference.csv`
+
+These datasets are not official property-market, electricity-provider, or maintenance-company data. Because the datasets are synthetic, the results should be treated as examples of how the Machine Learning workflow works rather than real-world official recommendations.
 
 ## Project Structure
 
@@ -85,32 +81,48 @@ HABIT/
 
 ## How to Run
 
-1. Install the required packages:
+1. Install the required libraries:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Start the Streamlit application:
+2. Run the Streamlit application:
 
 ```bash
 streamlit run app.py
 ```
 
-## Disclaimer
+## Limitations
 
-HABIT is a student-developed portfolio project intended for learning and demonstration purposes. Its outputs should be treated as estimates and analytical references rather than official rental market values, professional electrical diagnoses, or guaranteed maintenance completion times.
+- Rental results are estimates based on the provided reference dataset, not official market valuations.
+- Energy anomaly detection only identifies unusual patterns and does not diagnose electrical problems.
+- Maintenance waiting time is an estimate and does not guarantee an exact service time.
+- Model behavior depends on the synthetic datasets used in this project.
+- The current version trains the models when the application starts instead of loading pre-trained model files.
+
+## Future Work
+
+Possible improvements for future versions of HABIT include:
+
+- Replace or compare the synthetic datasets with suitable public or real-world datasets.
+- Add model evaluation using metrics such as MAE, RMSE, and R².
+- Compare Random Forest with other suitable regression models to see which performs better on the available data.
+- Add a simple history feature so users can review previous rent, bill, energy, or maintenance checks.
+- Improve the Energy Usage feature by showing monthly usage trends when historical user data is available.
+- Add more property and maintenance categories as the dataset becomes more complete.
+- Improve the interface and mobile responsiveness while keeping the application simple and easy to use.
 
 ## What I Learned
 
 Through this project, I practiced:
 
 - Preparing numerical and categorical data for Machine Learning.
-- Using Scikit-learn preprocessing and models in a small application.
-- Applying regression and anomaly detection to different types of problems.
-- Using Pandas and Streamlit charts for simple data analysis and visualization.
+- Using Scikit-learn pipelines and preprocessing tools.
+- Training regression and anomaly detection models.
 - Connecting Machine Learning results to a Streamlit interface.
-- Organizing a student project into a small number of readable files.
+- Presenting predictions and analytics in a form that is easier for users to understand.
+- Organizing a small Machine Learning project into simple and reusable Python files.
 
 ## Author
 

@@ -12,7 +12,7 @@ def bill_summary(rent, electricity, water, internet, other):
     }
 
     total = sum(values.values())
-    largest = max(values, key=values.get) if values else "None"
+    largest = max(values, key=values.get)
 
     return {
         "values": values,
