@@ -3,7 +3,8 @@
 HABIT is a student portfolio project that uses Machine Learning and simple data analytics to support everyday housing decisions. The application helps users review rental prices, summarize monthly bills, check electricity usage patterns, and estimate maintenance waiting time.
 
 > Computer Science Portfolio Project — Semester 5
-https://habit-project.streamlit.app/
+
+LIVE APP : https://habit-project.streamlit.app/
 
 ## Project Objective
 
