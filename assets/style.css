@@ -147,14 +147,16 @@ div[data-testid="stMetricValue"] { letter-spacing: -.035em; }
 }
 
 div[data-baseweb="select"] > div,
-div[data-testid="stNumberInput"] input {
-  background: #f7f8f5; border-color: var(--border);
+div[data-testid="stNumberInput"] div[data-baseweb="input"] {
+  background: #f7f8f5 !important; border: 1px solid var(--accent) !important; box-shadow: none !important;
 }
 
 div[data-baseweb="select"] > div:focus-within,
-div[data-testid="stNumberInput"] input:focus {
-  border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent);
+div[data-testid="stNumberInput"] div[data-baseweb="input"]:focus-within {
+  border-color: var(--accent-dark) !important; box-shadow: 0 0 0 1px var(--accent-dark) !important;
 }
+
+li[role="option"][aria-selected="true"] { background: rgba(63,103,88,.14) !important; color: var(--text) !important; }
 
 .stButton > button,
 .stFormSubmitButton > button {

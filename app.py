@@ -331,7 +331,7 @@ def show_about():
 
         Machine Learning supports rental price estimation, unusual electricity usage detection, and maintenance waiting-time estimation. The Monthly Bills feature uses straightforward data analytics to summarize regular expenses and help users understand their spending patterns. Together, these features demonstrate how Machine Learning and data analysis can be applied to practical everyday living problems.
 
-        As a student-developed portfolio project, HABIT is intended for learning and demonstration purposes. Its results should be treated as estimates and analytical references rather than official rental market values, professional electrical diagnoses, or guaranteed maintenance completion times.
+        HABIT is intended for learning and demonstration purposes. Its results should be treated as estimates and analytical references rather than official rental market values, professional electrical diagnoses, or guaranteed maintenance completion times.
         """
     )
 
