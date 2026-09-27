@@ -22,21 +22,11 @@ st.set_page_config(
 )
 
 
-def load_css():
-    with STYLE_PATH.open("r", encoding="utf-8") as file:
-        st.markdown(f"<style>{file.read()}</style>", unsafe_allow_html=True)
-
-
 @st.cache_resource(show_spinner=False)
 def get_models():
-    rental_data = load_rental_data()
-    energy_data = load_energy_data()
-    maintenance_data = load_maintenance_data()
-
-    rental_model = train_rental_model(rental_data)
-    energy_models = train_energy_models(energy_data)
-    maintenance_model = train_maintenance_model(maintenance_data)
-
+    rental_model = train_rental_model(load_rental_data())
+    energy_models = train_energy_models(load_energy_data())
+    maintenance_model = train_maintenance_model(load_maintenance_data())
     return rental_model, energy_models, maintenance_model
 
 
@@ -47,6 +37,19 @@ def show_header(title, subtitle):
             <div class="kicker">Smart living assistant</div>
             <h1>{title}</h1>
             <p>{subtitle}</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def show_result_card(label, value, note):
+    st.markdown(
+        f"""
+        <div class="result-hero">
+            <div class="result-label">{label}</div>
+            <div class="result-value">{value}</div>
+            <div class="result-note">{note}</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -90,17 +93,10 @@ def show_rent_check(rental_model):
 
     with st.form("rent_form"):
         col1, col2 = st.columns(2)
-
         with col1:
             area = st.selectbox(
                 "Area",
-                [
-                    "Central Jakarta",
-                    "West Jakarta",
-                    "South Jakarta",
-                    "East Jakarta",
-                    "North Jakarta",
-                ],
+                ["Central Jakarta", "West Jakarta", "South Jakarta", "East Jakarta", "North Jakarta"],
             )
             property_type = st.selectbox(
                 "Property type",
@@ -114,55 +110,41 @@ def show_rent_check(rental_model):
             furnished = st.selectbox("Furnished", ["No", "Semi", "Yes"])
 
         listed_rent = st.number_input(
-            "Current / listed monthly rent (Rp)",
-            500_000,
-            50_000_000,
-            4_000_000,
-            100_000,
+            "Current / listed monthly rent (Rp)", 500_000, 50_000_000, 4_000_000, 100_000
         )
         submitted = st.form_submit_button("Analyze Rent")
 
     if not submitted:
         return
 
-    values = {
-        "area": area,
-        "property_type": property_type,
-        "bedrooms": bedrooms,
-        "bathrooms": bathrooms,
-        "size_m2": size_m2,
-        "furnished": furnished,
-        "listed_rent": listed_rent,
-    }
-    result = estimate_rent(rental_model, values)
+    result = estimate_rent(
+        rental_model,
+        {
+            "area": area,
+            "property_type": property_type,
+            "bedrooms": bedrooms,
+            "bathrooms": bathrooms,
+            "size_m2": size_m2,
+            "furnished": furnished,
+            "listed_rent": listed_rent,
+        },
+    )
 
-    st.markdown(
-        f"""
-        <div class="result-hero">
-            <div class="result-label">Rental price status</div>
-            <div class="result-value">{result['status']}</div>
-            <div class="result-note">
-                HABIT compares this listing with rental patterns learned from the reference dataset.
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    show_result_card(
+        "Rental price status",
+        result["status"],
+        "HABIT compares this listing with rental patterns learned from the reference dataset.",
     )
 
     col1, col2 = st.columns([1, 1.7])
     col1.metric("Listed Rent", format_idr(listed_rent))
-
     with col2:
         st.markdown(
             f"""
             <div class="rent-range-card">
                 <div class="rent-range-label">Recommended Monthly Range</div>
-                <div class="rent-range-value">
-                    {format_idr(result['lower'])} – {format_idr(result['upper'])}
-                </div>
-                <div class="rent-range-note">
-                    Based on similar property patterns in the reference dataset.
-                </div>
+                <div class="rent-range-value">{format_idr(result['lower'])} – {format_idr(result['upper'])}</div>
+                <div class="rent-range-note">Based on similar property patterns in the reference dataset.</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -194,7 +176,6 @@ def show_monthly_bills():
         rent = st.number_input("Rent", 0, 50_000_000, 4_000_000, 100_000)
         electricity = st.number_input("Electricity", 0, 10_000_000, 400_000, 50_000)
         water = st.number_input("Water", 0, 5_000_000, 100_000, 25_000)
-
     with col2:
         internet = st.number_input("Internet", 0, 5_000_000, 350_000, 50_000)
         other = st.number_input("Other", 0, 10_000_000, 150_000, 50_000)
@@ -203,25 +184,15 @@ def show_monthly_bills():
         return
 
     result = bill_summary(rent, electricity, water, internet, other)
-
-    st.markdown(
-        f"""
-        <div class="result-hero">
-            <div class="result-label">Estimated monthly living cost</div>
-            <div class="result-value">{format_idr(result['total'])}</div>
-            <div class="result-note">Largest expense category: {result['largest']}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    show_result_card(
+        "Estimated monthly living cost",
+        format_idr(result["total"]),
+        f"Largest expense category: {result['largest']}",
     )
 
     chart_data = pd.DataFrame(
-        {
-            "Category": list(result["values"].keys()),
-            "Amount": list(result["values"].values()),
-        }
+        {"Category": list(result["values"].keys()), "Amount": list(result["values"].values())}
     )
-
     chart = px.bar(chart_data, x="Category", y="Amount", text_auto=".2s")
     chart.update_traces(marker_color="#47655a")
     chart.update_layout(
@@ -243,35 +214,13 @@ def show_energy_usage(energy_models):
 
     with st.form("energy_form"):
         col1, col2 = st.columns(2)
-
         with col1:
             residents = st.number_input("Residents", 1, 10, 2)
-            home_type = st.selectbox(
-                "Home type",
-                ["Boarding Room", "Apartment", "House"],
-            )
-            month = st.selectbox(
-                "Month",
-                list(range(1, 13)),
-                index=datetime.now().month - 1,
-            )
-
+            home_type = st.selectbox("Home type", ["Boarding Room", "Apartment", "House"])
+            month = st.selectbox("Month", list(range(1, 13)), index=datetime.now().month - 1)
         with col2:
-            ac_hours = st.number_input(
-                "Average AC use per day (hours)",
-                0.0,
-                24.0,
-                4.0,
-                0.5,
-            )
-            usage = st.number_input(
-                "Monthly electricity usage (kWh)",
-                1.0,
-                3000.0,
-                150.0,
-                1.0,
-            )
-
+            ac_hours = st.number_input("Average AC use per day (hours)", 0.0, 24.0, 4.0, 0.5)
+            usage = st.number_input("Monthly electricity usage (kWh)", 1.0, 3000.0, 150.0, 1.0)
         submitted = st.form_submit_button("Check Energy Usage")
 
     if not submitted:
@@ -291,26 +240,16 @@ def show_energy_usage(energy_models):
         },
     )
 
-    st.markdown(
-        f"""
-        <div class="result-hero">
-            <div class="result-label">Energy usage status</div>
-            <div class="result-value">{result['status']}</div>
-            <div class="result-note">
-                Isolation Forest checks whether this usage pattern differs from similar reference observations.
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    show_result_card(
+        "Energy usage status",
+        result["status"],
+        "Isolation Forest checks whether this usage pattern differs from similar reference observations.",
     )
 
     col1, col2, col3 = st.columns(3)
     col1.metric("Your Usage", f"{usage:.1f} kWh")
     col2.metric("Expected Usage", f"{result['expected']:.1f} kWh")
-    col3.metric(
-        "Typical Range",
-        f"{result['lower']:.0f}–{result['upper']:.0f} kWh",
-    )
+    col3.metric("Typical Range", f"{result['lower']:.0f}–{result['upper']:.0f} kWh")
 
     difference = result["difference_pct"]
     direction = "above" if difference >= 0 else "below"
@@ -332,22 +271,13 @@ def show_maintenance(maintenance_model):
 
     with st.form("maintenance_form"):
         col1, col2 = st.columns(2)
-
         with col1:
             issue_type = st.selectbox(
                 "Issue type",
-                [
-                    "Air Conditioner",
-                    "Plumbing",
-                    "Electricity",
-                    "Internet",
-                    "Door/Lock",
-                    "Other",
-                ],
+                ["Air Conditioner", "Plumbing", "Electricity", "Internet", "Door/Lock", "Other"],
             )
             priority = st.selectbox("Priority", ["Low", "Normal", "High"], index=1)
             queue_length = st.number_input("Requests ahead", 0, 30, 4)
-
         with col2:
             technicians = st.number_input("Technicians available", 1, 10, 2)
             request_hour = st.slider("Request hour", 8, 20, 13)
@@ -364,7 +294,6 @@ def show_maintenance(maintenance_model):
                 ],
                 format_func=lambda day: day[1],
             )
-
         submitted = st.form_submit_button("Estimate Waiting Time")
 
     if not submitted:
@@ -382,22 +311,12 @@ def show_maintenance(maintenance_model):
         },
     )
 
-    st.markdown(
-        f"""
-        <div class="result-hero">
-            <div class="result-label">Estimated waiting time</div>
-            <div class="result-value">{result['minutes']:.0f} minutes</div>
-            <div class="result-note">
-                {result['label']} based on similar historical maintenance conditions.
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    show_result_card(
+        "Estimated waiting time",
+        f"{result['minutes']:.0f} minutes",
+        f"{result['label']} based on similar historical maintenance conditions.",
     )
-    st.metric(
-        "Estimated Range",
-        f"{result['low']:.0f}–{result['high']:.0f} minutes",
-    )
+    st.metric("Estimated Range", f"{result['low']:.0f}–{result['high']:.0f} minutes")
     st.caption("This is an estimate, not a guaranteed service time.")
 
 
@@ -408,23 +327,19 @@ def show_about():
     )
     st.markdown(
         """
-        HABIT is a student-built application that brings several common living needs into one simple interface.
-        Instead of asking users to work with raw datasets or Machine Learning settings, HABIT lets users enter
-        familiar information such as rental details, monthly expenses, electricity usage, or maintenance conditions
-        and then presents the result in a form that is easier to understand.
+        HABIT is a data-driven application that brings several everyday living needs into one practical and easy-to-use platform. Users can enter familiar information related to housing, monthly expenses, electricity usage, and maintenance conditions, while HABIT processes the input and presents the results in a simpler form.
 
-        Machine Learning works behind the application to support rental price estimation, unusual electricity usage
-        detection, and maintenance waiting-time estimation. The Monthly Bills feature uses straightforward data
-        analytics to help users understand how their regular living expenses are distributed.
+        Machine Learning supports rental price estimation, unusual electricity usage detection, and maintenance waiting-time estimation. The Monthly Bills feature uses straightforward data analytics to summarize regular expenses and help users understand their spending patterns. Together, these features demonstrate how Machine Learning and data analysis can be applied to practical everyday living problems.
 
-        HABIT is designed as an educational portfolio project, so its results should be treated as helpful estimates
-        and analytical references rather than official market prices, electrical diagnoses, or guaranteed service times.
+        As a student-developed portfolio project, HABIT is intended for learning and demonstration purposes. Its results should be treated as estimates and analytical references rather than official rental market values, professional electrical diagnoses, or guaranteed maintenance completion times.
         """
     )
 
 
 def main():
-    load_css()
+    with STYLE_PATH.open("r", encoding="utf-8") as file:
+        st.markdown(f"<style>{file.read()}</style>", unsafe_allow_html=True)
+
     rental_model, energy_models, maintenance_model = get_models()
 
     st.sidebar.markdown(
@@ -438,15 +353,7 @@ def main():
     )
 
     page = st.sidebar.radio(
-        "Navigation",
-        [
-            "Home",
-            "Rent Check",
-            "Monthly Bills",
-            "Energy Usage",
-            "Maintenance",
-            "About",
-        ],
+        "Navigation", ["Home", "Rent Check", "Monthly Bills", "Energy Usage", "Maintenance", "About"]
     )
 
     if page == "Home":
