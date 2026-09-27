@@ -1,7 +1,6 @@
 from datetime import datetime
 from pathlib import Path
 
-import pandas as pd
 import plotly.express as px
 import streamlit as st
 
@@ -63,11 +62,10 @@ def show_home():
     )
 
     st.markdown("### Living overview")
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Rent Tool", "Ready")
-    col2.metric("Bills Tool", "Ready")
-    col3.metric("Energy Check", "Ready")
-    col4.metric("Maintenance", "Ready")
+    for column, label in zip(
+        st.columns(4), ["Rent Tool", "Bills Tool", "Energy Check", "Maintenance"]
+    ):
+        column.metric(label, "Ready")
 
     st.markdown("")
     st.markdown(
@@ -82,6 +80,17 @@ def show_home():
         </div>
         """,
         unsafe_allow_html=True,
+    )
+
+    st.markdown("### About HABIT")
+    st.markdown(
+        """
+        HABIT is a data-driven application that brings several everyday living needs into one practical and easy-to-use platform. Users can enter familiar information related to housing, monthly expenses, electricity usage, and maintenance conditions, while HABIT processes the input and presents the results in a simpler form.
+
+        Machine Learning supports rental price estimation, unusual electricity usage detection, and maintenance waiting-time estimation. The Monthly Bills feature uses straightforward data analytics to summarize regular expenses and help users understand their spending patterns. Together, these features demonstrate how Machine Learning and data analysis can be applied to practical everyday living problems.
+
+        HABIT is intended for learning and demonstration purposes. Its results should be treated as estimates and analytical references rather than official rental market values, professional electrical diagnoses, or guaranteed maintenance completion times.
+        """
     )
 
 
@@ -112,7 +121,7 @@ def show_rent_check(rental_model):
         listed_rent = st.number_input(
             "Current / listed monthly rent (Rp)", 500_000, 50_000_000, 4_000_000, 100_000
         )
-        submitted = st.form_submit_button("Analyze Rent")
+        submitted = st.form_submit_button("Analyze Rent", type="primary")
 
     if not submitted:
         return
@@ -171,16 +180,18 @@ def show_monthly_bills():
         "Add your regular monthly costs and HABIT will summarize where your living expenses go.",
     )
 
-    col1, col2 = st.columns(2)
-    with col1:
-        rent = st.number_input("Rent", 0, 50_000_000, 4_000_000, 100_000)
-        electricity = st.number_input("Electricity", 0, 10_000_000, 400_000, 50_000)
-        water = st.number_input("Water", 0, 5_000_000, 100_000, 25_000)
-    with col2:
-        internet = st.number_input("Internet", 0, 5_000_000, 350_000, 50_000)
-        other = st.number_input("Other", 0, 10_000_000, 150_000, 50_000)
+    with st.form("bills_form"):
+        col1, col2 = st.columns(2)
+        with col1:
+            rent = st.number_input("Rent", 0, 50_000_000, 4_000_000, 100_000)
+            electricity = st.number_input("Electricity", 0, 10_000_000, 400_000, 50_000)
+            water = st.number_input("Water", 0, 5_000_000, 100_000, 25_000)
+        with col2:
+            internet = st.number_input("Internet", 0, 5_000_000, 350_000, 50_000)
+            other = st.number_input("Other", 0, 10_000_000, 150_000, 50_000)
+        submitted = st.form_submit_button("Calculate Monthly Cost", type="primary")
 
-    if not st.button("Calculate Monthly Cost"):
+    if not submitted:
         return
 
     result = bill_summary(rent, electricity, water, internet, other)
@@ -190,11 +201,12 @@ def show_monthly_bills():
         f"Largest expense category: {result['largest']}",
     )
 
-    chart_data = pd.DataFrame(
-        {"Category": list(result["values"].keys()), "Amount": list(result["values"].values())}
+    chart = px.bar(
+        x=list(result["values"].keys()),
+        y=list(result["values"].values()),
+        text_auto=".2s",
+        color_discrete_sequence=["#47655a"],
     )
-    chart = px.bar(chart_data, x="Category", y="Amount", text_auto=".2s")
-    chart.update_traces(marker_color="#47655a")
     chart.update_layout(
         height=360,
         showlegend=False,
@@ -221,7 +233,7 @@ def show_energy_usage(energy_models):
         with col2:
             ac_hours = st.number_input("Average AC use per day (hours)", 0.0, 24.0, 4.0, 0.5)
             usage = st.number_input("Monthly electricity usage (kWh)", 1.0, 3000.0, 150.0, 1.0)
-        submitted = st.form_submit_button("Check Energy Usage")
+        submitted = st.form_submit_button("Check Energy Usage", type="primary")
 
     if not submitted:
         return
@@ -281,20 +293,9 @@ def show_maintenance(maintenance_model):
         with col2:
             technicians = st.number_input("Technicians available", 1, 10, 2)
             request_hour = st.slider("Request hour", 8, 20, 13)
-            day_of_week = st.selectbox(
-                "Day",
-                [
-                    (0, "Monday"),
-                    (1, "Tuesday"),
-                    (2, "Wednesday"),
-                    (3, "Thursday"),
-                    (4, "Friday"),
-                    (5, "Saturday"),
-                    (6, "Sunday"),
-                ],
-                format_func=lambda day: day[1],
-            )
-        submitted = st.form_submit_button("Estimate Waiting Time")
+            days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+            day_of_week = st.selectbox("Day", range(7), format_func=lambda day: days[day])
+        submitted = st.form_submit_button("Estimate Waiting Time", type="primary")
 
     if not submitted:
         return
@@ -307,7 +308,7 @@ def show_maintenance(maintenance_model):
             "queue_length": queue_length,
             "technicians_available": technicians,
             "request_hour": request_hour,
-            "day_of_week": day_of_week[0],
+            "day_of_week": day_of_week,
         },
     )
 
@@ -318,22 +319,6 @@ def show_maintenance(maintenance_model):
     )
     st.metric("Estimated Range", f"{result['low']:.0f}–{result['high']:.0f} minutes")
     st.caption("This is an estimate, not a guaranteed service time.")
-
-
-def show_about():
-    show_header(
-        "About HABIT",
-        "A smart living assistant designed to make everyday housing decisions easier to understand.",
-    )
-    st.markdown(
-        """
-        HABIT is a data-driven application that brings several everyday living needs into one practical and easy-to-use platform. Users can enter familiar information related to housing, monthly expenses, electricity usage, and maintenance conditions, while HABIT processes the input and presents the results in a simpler form.
-
-        Machine Learning supports rental price estimation, unusual electricity usage detection, and maintenance waiting-time estimation. The Monthly Bills feature uses straightforward data analytics to summarize regular expenses and help users understand their spending patterns. Together, these features demonstrate how Machine Learning and data analysis can be applied to practical everyday living problems.
-
-        HABIT is intended for learning and demonstration purposes. Its results should be treated as estimates and analytical references rather than official rental market values, professional electrical diagnoses, or guaranteed maintenance completion times.
-        """
-    )
 
 
 def main():
@@ -353,7 +338,7 @@ def main():
     )
 
     page = st.sidebar.radio(
-        "Navigation", ["Home", "Rent Check", "Monthly Bills", "Energy Usage", "Maintenance", "About"]
+        "Navigation", ["Home", "Rent Check", "Monthly Bills", "Energy Usage", "Maintenance"]
     )
 
     if page == "Home":
@@ -364,10 +349,8 @@ def main():
         show_monthly_bills()
     elif page == "Energy Usage":
         show_energy_usage(energy_models)
-    elif page == "Maintenance":
-        show_maintenance(maintenance_model)
     else:
-        show_about()
+        show_maintenance(maintenance_model)
 
 
 if __name__ == "__main__":
