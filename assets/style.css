@@ -1,11 +1,16 @@
 :root {
-  --bg: #f4f5f2;
+  --background: #f4f5f2;
+  --surface: #ffffff;
+  --sidebar: #e9eee9;
+  --text: #202823;
+  --muted: #66706a;
   --accent: #3f6758;
+  --accent-dark: #315044;
   --border: #d7ddd8;
 }
 
 .stApp {
-  background: var(--bg);
+  background: var(--background);
 }
 
 .block-container {
@@ -15,35 +20,64 @@
 }
 
 [data-testid="stSidebar"] {
-  background: #e9eee9;
+  background: var(--sidebar);
   border-right: 1px solid var(--border);
 }
 
-h1, h2, h3 {
-  color: #202823;
+h1,
+h2,
+h3 {
+  color: var(--text);
+}
+
+h1 {
+  margin-bottom: 0.25rem;
+}
+
+p {
+  color: var(--text);
+}
+
+[data-testid="stCaptionContainer"] p {
+  color: var(--muted);
+}
+
+/* White input box used by the main forms. */
+[data-testid="stForm"] {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+/* Keep result numbers visually separate without adding custom cards. */
+div[data-testid="stMetric"] {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
 }
 
 .stButton > button,
 .stFormSubmitButton > button {
   background: var(--accent);
   color: white;
-  border: none;
+  border: 1px solid var(--accent);
   border-radius: 8px;
+  min-height: 2.6rem;
 }
 
 .stButton > button:hover,
 .stFormSubmitButton > button:hover {
-  background: #315044;
+  background: var(--accent-dark);
+  border-color: var(--accent-dark);
   color: white;
 }
 
-[data-testid="stForm"],
-div[data-testid="stMetric"] {
-  background: white;
-  border: 1px solid var(--border);
+[data-testid="stAlert"] {
   border-radius: 10px;
 }
 
-[data-testid="stForm"] {
-  padding: 1rem;
+hr {
+  border-color: var(--border);
 }

@@ -4,9 +4,7 @@ HABIT is a data-driven student project that brings several everyday living needs
 
 > Computer Science Portfolio Project — Semester 5
 
-LIVE APP : https://habit-project.streamlit.app/
-
-## Project Objective
+## Overview
 
 HABIT is designed to make several living-related data tasks easier to understand without requiring users to work directly with datasets or Machine Learning settings. Users enter familiar information related to housing, expenses, electricity usage, or maintenance conditions, and the application presents the result as an estimate or analytical reference.
 
