@@ -1,17 +1,12 @@
 :root {
   --bg: #f2f3ef;
   --surface: #ffffff;
-  --surface-soft: #e8ede8;
-  --surface-muted: #f7f8f5;
   --text: #202823;
   --muted: #69726c;
   --border: #d3dad4;
   --border-strong: #bcc8c0;
   --accent: #3f6758;
   --accent-dark: #315044;
-  --accent-soft: #dfeae4;
-  --accent-pale: #edf3ef;
-  --warning: #a85e4c;
   --shadow: 0 12px 28px rgba(44, 62, 51, .055);
 }
 
@@ -81,6 +76,7 @@ html, body, [class*="css"] {
 .hero {
   position: relative;
   padding: 1.55rem 1.65rem 1.5rem 1.8rem;
+  margin-top: .9rem;
   margin-bottom: 1.5rem;
   background: rgba(255,255,255,.70);
   border: 1px solid var(--border);
@@ -135,18 +131,6 @@ html, body, [class*="css"] {
   font-size: .98rem;
 }
 
-.section-title {
-  font-size: 1.16rem;
-  font-weight: 760;
-  letter-spacing: -.025em;
-  margin: .25rem 0 .2rem;
-}
-
-.section-copy {
-  color: var(--muted);
-  font-size: .9rem;
-  margin-bottom: .9rem;
-}
 
 .panel {
   background: rgba(255,255,255,.82);
@@ -323,6 +307,7 @@ hr {
   }
 
   .hero {
+    margin-top: .7rem;
     padding: 1.25rem 1.1rem 1.2rem 1.3rem;
     border-radius: 14px;
   }
@@ -336,24 +321,12 @@ hr {
   }
 }
 
-/* Keep HABIT visually light-only and give the top hero card breathing room. */
-.hero {
-  margin-top: .9rem;
-}
-
 [data-testid="stCaptionContainer"],
 [data-testid="stCaptionContainer"] p,
-.section-copy,
 .result-note,
 .rent-range-note,
 .habit-sub,
 .hero p {
   color: var(--muted) !important;
   font-weight: 400;
-}
-
-@media (max-width: 760px) {
-  .hero {
-    margin-top: .7rem;
-  }
 }
