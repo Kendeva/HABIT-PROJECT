@@ -2,6 +2,8 @@
 
 HABIT is a data-driven application that uses Machine Learning and simple data analytics to support everyday housing decisions. The application helps users review rental prices, summarize monthly bills, check electricity usage patterns, and estimate maintenance waiting time.
 
+LIVE APP : https://habit-project.streamlit.app/
+
 ## Project Objective
 
 The main goal of HABIT is to explore how simple Machine Learning models can be applied to common living and housing problems. The project focuses on creating a practical application that is easy to understand, while still showing the basic workflow of data processing, model training, prediction, and visualization.
