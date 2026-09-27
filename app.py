@@ -82,16 +82,6 @@ def show_home():
         unsafe_allow_html=True,
     )
 
-    st.markdown("### About HABIT")
-    st.markdown(
-        """
-        HABIT is a data-driven application that brings several everyday living needs into one practical and easy-to-use platform. Users can enter familiar information related to housing, monthly expenses, electricity usage, and maintenance conditions, while HABIT processes the input and presents the results in a simpler form.
-
-        Machine Learning supports rental price estimation, unusual electricity usage detection, and maintenance waiting-time estimation. The Monthly Bills feature uses straightforward data analytics to summarize regular expenses and help users understand their spending patterns. Together, these features demonstrate how Machine Learning and data analysis can be applied to practical everyday living problems.
-
-        HABIT is intended for learning and demonstration purposes. Its results should be treated as estimates and analytical references rather than official rental market values, professional electrical diagnoses, or guaranteed maintenance completion times.
-        """
-    )
 
 
 def show_rent_check(rental_model):
