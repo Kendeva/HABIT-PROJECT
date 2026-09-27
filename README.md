@@ -3,6 +3,7 @@
 HABIT is a smart living assistant powered by Machine Learning that helps users evaluate rental prices, understand monthly living expenses, analyze electricity usage, and estimate maintenance waiting times through simple everyday inputs.
 
 > Portfolio Project — Computer Science | Semester 5
+> LIVE APP : https://habit-project.streamlit.app/
 
 ---
 
