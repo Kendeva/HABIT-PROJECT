@@ -64,13 +64,13 @@ def estimate_rent(model, values):
     listed_rent = float(values.get("listed_rent", predicted_rent))
 
     if listed_rent > upper:
-        status = "Higher Than Recommended"
+        status = "Above Estimated Range"
         difference = (listed_rent - upper) / upper * 100 if upper else 0
     elif listed_rent < lower:
-        status = "Lower Than Recommended"
+        status = "Below Estimated Range"
         difference = (lower - listed_rent) / lower * 100 if lower else 0
     else:
-        status = "Within Recommended Range"
+        status = "Within Estimated Range"
         difference = 0
 
     return {
