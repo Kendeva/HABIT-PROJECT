@@ -1,130 +1,162 @@
-# HABIT
+# HABIT — Smart Home Living Assistant
 
-HABIT is a data-driven application that uses Machine Learning and simple data analytics to support everyday housing decisions. The application helps users review rental prices, summarize monthly bills, check electricity usage patterns, and estimate maintenance waiting time.
+HABIT has three main AI/ML features:
 
-LIVE APP : https://habit-project.streamlit.app/
+1. Home Condition — pretrained ViT
+2. Maintenance Detection — Custom CNN trained for this project
+3. Indonesian Property Estimate — regression model trained for this project
 
-## Project Objective
+## Datasets and Models
 
-The main goal of HABIT is to explore how simple Machine Learning models can be applied to common living and housing problems. The project focuses on creating a practical application that is easy to understand, while still showing the basic workflow of data processing, model training, prediction, and visualization.
+### Home Condition
+Pretrained Hugging Face model:
 
-## Features
+`DejanX13/vit-house-classifier`
 
-- **Rent Check** — estimates a reasonable monthly rental range and compares it with the listed rent.
-- **Monthly Bills** — calculates total monthly living expenses and shows the expense distribution in a chart.
-- **Energy Usage** — compares entered electricity usage with an expected value and checks for unusual usage patterns.
-- **Maintenance** — estimates maintenance waiting time from queue conditions, request type, and technician availability.
+No local training is needed for this feature.
 
-## Technologies
+### Maintenance Detection
+Dataset:
 
-- Python
-- Streamlit
-- Pandas
-- Scikit-learn
-- Plotly
+`chandrabhuma/building_defect_vqa`
 
-## Machine Learning
+The dataset contains 3,965 building-surface images with seven defect labels.
+The project trains a simple Custom CNN.
 
-| Feature | Method |
-|---|---|
-| Rent Check | Random Forest Regressor |
-| Energy Usage | Random Forest Regressor + Isolation Forest |
-| Maintenance | Random Forest Regressor |
-| Monthly Bills | Basic Data Analytics |
+Train:
 
-## How It Works
+```bash
+python train_maintenance.py
+```
 
-HABIT uses a simple workflow for each Machine Learning feature:
+Output:
 
-1. Load the reference dataset.
-2. Separate numerical and categorical features.
-3. Encode categorical values using `OneHotEncoder`.
-4. Train the required model when the application starts.
-5. Accept input from the user through Streamlit.
-6. Process the input and generate an estimate or analysis result.
-7. Display the result in a simple and readable format.
+```text
+models/maintenance_cnn.pth
+```
 
-The Energy Usage feature also uses Isolation Forest to check whether the entered electricity usage pattern appears typical or unusual compared with the reference data.
+### Indonesian Property Estimate
+Dataset:
 
-## Dataset
+`web3hungry/indonesia-affordable-housing`
 
-HABIT currently uses three synthetic reference datasets created for educational and demonstration purposes:
+The source contains Indonesian housing records. HABIT uses a maximum sample of
+5,000 cleaned records so local training stays realistic for a student project.
 
-- `data/rental_reference.csv`
-- `data/energy_reference.csv`
-- `data/maintenance_reference.csv`
+Train:
 
-These datasets are not official property-market, electricity-provider, or maintenance-company data. Because the datasets are synthetic, the results should be treated as examples of how the Machine Learning workflow works rather than real-world official recommendations.
+```bash
+python train_property.py
+```
+
+Output:
+
+```text
+models/property_model.joblib
+```
+
+The property prediction input is passed as a pandas DataFrame with the same
+column names used during training. This avoids the ColumnTransformer error:
+"Specifying the columns using strings is only supported for dataframes."
 
 ## Project Structure
 
 ```text
-HABIT/
+HABIT_final_fixed/
 ├── app.py
+├── model.py
+├── options.py
+├── train_maintenance.py
+├── train_property.py
 ├── requirements.txt
 ├── README.md
-├── .streamlit/
-│   └── config.toml
 ├── assets/
 │   └── style.css
-├── data/
-│   ├── rental_reference.csv
-│   ├── energy_reference.csv
-│   └── maintenance_reference.csv
-└── utils/
-    ├── analytics.py
-    ├── data_loader.py
-    ├── energy_model.py
-    ├── maintenance_model.py
-    └── rental_model.py
+└── models/
 ```
 
-## How to Run
+## Install and Run
 
-1. Install the required libraries:
+Create virtual environment:
+
+```bash
+python -m venv .venv
+```
+
+Activate on Windows:
+
+```bash
+.venv\Scripts\activate
+```
+
+Install packages:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Run the Streamlit application:
+Train Maintenance:
+
+```bash
+python train_maintenance.py
+```
+
+Train Property Estimate:
+
+```bash
+python train_property.py
+```
+
+Run HABIT:
 
 ```bash
 streamlit run app.py
 ```
 
-## Limitations
+## UI Colors
 
-- Rental results are estimates based on the provided reference dataset, not official market valuations.
-- Energy anomaly detection only identifies unusual patterns and does not diagnose electrical problems.
-- Maintenance waiting time is an estimate and does not guarantee an exact service time.
-- Model behavior depends on the synthetic datasets used in this project.
-- The current version trains the models when the application starts instead of loading pre-trained model files.
+The CSS uses only four priority colors:
 
-## Future Work
+- `#2F4A3C` — deep green
+- `#F4F4EF` — off-white
+- `#FFFFFF` — white
+- `#171A18` — dark text
 
-Possible improvements for future versions of HABIT include:
+The footer and bottom area use light backgrounds.
 
-- Replace or compare the synthetic datasets with suitable public or real-world datasets.
-- Add model evaluation using metrics such as MAE, RMSE, and R².
-- Compare Random Forest with other suitable regression models to see which performs better on the available data.
-- Add a simple history feature so users can review previous rent, bill, energy, or maintenance checks.
-- Improve the Energy Usage feature by showing monthly usage trends when historical user data is available.
-- Add more property and maintenance categories as the dataset becomes more complete.
-- Improve the interface and mobile responsiveness while keeping the application simple and easy to use.
+## Notes
 
-## What I Learned
+- Home Scan uses a pretrained model.
+- Maintenance CNN is trained by you.
+- Property regression model is trained by you.
+- HABIT outputs are AI-assisted references, not professional inspections or appraisals.
 
-Through this project, I practiced:
 
-- Preparing numerical and categorical data for Machine Learning.
-- Using Scikit-learn pipelines and preprocessing tools.
-- Training regression and anomaly detection models.
-- Connecting Machine Learning results to a Streamlit interface.
-- Presenting predictions and analytics in a form that is easier for users to understand.
-- Organizing a small Machine Learning project into simple and reusable Python files.
+## Property Range Improvement
 
-## Author
+The property model now predicts `log(price)` instead of raw price. This reduces
+the effect of extreme property prices.
 
-Keanu Stadeva  
-Computer Science Student
+The estimated range is no longer calculated as only `price ± MAE`.
+It is calibrated from real validation residuals:
+
+- 80% of data is used for training.
+- 10% is used to calibrate the estimated range.
+- 10% is used as a final test set.
+- The lower and upper range use the 10th and 90th percentile of calibration
+  residuals.
+
+`property_metrics.json` also stores the actual test-set range coverage so the
+range can be evaluated instead of guessed.
+
+After this update, retrain the property model:
+
+```bash
+python train_property.py
+```
+
+Then run:
+
+```bash
+streamlit run app.py
+```

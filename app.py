@@ -1,347 +1,326 @@
-from datetime import datetime
-from pathlib import Path
-
-import plotly.express as px
 import streamlit as st
+from PIL import Image, ImageOps
 
-from utils.analytics import bill_summary, format_idr
-from utils.data_loader import load_energy_data, load_maintenance_data, load_rental_data
-from utils.energy_model import analyze_energy, train_energy_models
-from utils.maintenance_model import estimate_wait, train_maintenance_model
-from utils.rental_model import estimate_rent, train_rental_model
-
-BASE_DIR = Path(__file__).resolve().parent
-STYLE_PATH = BASE_DIR / "assets" / "style.css"
-
-st.set_page_config(
-    page_title="HABIT",
-    page_icon="🏠",
-    layout="wide",
-    initial_sidebar_state="expanded",
+from model import (
+    analyze_home,
+    analyze_maintenance,
+    maintenance_model_ready,
+    estimate_property_price,
+    property_model_ready,
 )
+from options import AREAS, PROVINCES
 
+st.set_page_config(page_title="HABIT", page_icon="🏠", layout="wide")
 
-@st.cache_resource(show_spinner=False)
-def get_models():
-    rental_model = train_rental_model(load_rental_data())
-    energy_models = train_energy_models(load_energy_data())
-    maintenance_model = train_maintenance_model(load_maintenance_data())
-    return rental_model, energy_models, maintenance_model
-
-
-def show_header(title, subtitle):
-    st.markdown(
-        f"""
-        <div class="hero">
-            <div class="kicker">Smart living assistant</div>
-            <h1>{title}</h1>
-            <p>{subtitle}</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
+with open("assets/style.css", encoding="utf-8") as file:
+    st.markdown(f"<style>{file.read()}</style>", unsafe_allow_html=True)
+if "home_result" not in st.session_state:
+    st.session_state.home_result = None
+if "maintenance_result" not in st.session_state:
+    st.session_state.maintenance_result = None
+if "property_result" not in st.session_state:
+    st.session_state.property_result = None
+def preview_image(image):
+    return ImageOps.fit(
+        image.convert("RGB"),
+        (640, 480),
+        method=Image.Resampling.LANCZOS,
     )
-
-
-def show_result_card(label, value, note):
-    st.markdown(
-        f"""
-        <div class="result-hero">
-            <div class="result-label">{label}</div>
-            <div class="result-value">{value}</div>
-            <div class="result-note">{note}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def show_home():
-    show_header(
-        "HABIT",
-        "A simple AI-powered assistant for everyday living decisions — from rent and bills to energy use and maintenance waiting time.",
-    )
-
-    st.markdown("### Living overview")
-    for column, label in zip(
-        st.columns(4), ["Rent Tool", "Bills Tool", "Energy Check", "Maintenance"]
-    ):
-        column.metric(label, "Ready")
-
-    st.markdown("")
+def condition_text(condition):
+    messages = {
+        "Good": "The uploaded areas appear generally well maintained.",
+        "Fair": "Some uploaded areas may need closer attention.",
+        "Needs Attention": "One or more uploaded areas show a weaker condition.",
+        "Unknown": "The model could not confidently determine the condition.",
+    }
+    return messages.get(condition, "Home condition result.")
+with st.sidebar:
     st.markdown(
         """
-        <div class="panel">
-        <strong>What you can do with HABIT</strong><br><br>
-        • Check whether a rental price looks reasonable.<br>
-        • Estimate a suitable rental price range.<br>
-        • Calculate and review monthly living expenses.<br>
-        • Check whether electricity usage looks typical or unusual.<br>
-        • Estimate maintenance waiting time based on current conditions.
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-
-def show_rent_check(rental_model):
-    show_header(
-        "Rent Check",
-        "Enter basic property details and HABIT will estimate a reasonable monthly rent based on similar reference properties.",
-    )
-
-    with st.form("rent_form"):
-        col1, col2 = st.columns(2)
-        with col1:
-            area = st.selectbox(
-                "Area",
-                ["Central Jakarta", "West Jakarta", "South Jakarta", "East Jakarta", "North Jakarta"],
-            )
-            property_type = st.selectbox(
-                "Property type",
-                ["Studio", "Apartment", "Boarding House", "Small House"],
-            )
-            bedrooms = st.number_input("Bedrooms", 1, 5, 1)
-
-        with col2:
-            bathrooms = st.number_input("Bathrooms", 1, 4, 1)
-            size_m2 = st.number_input("Size (m²)", 15.0, 250.0, 32.0, 1.0)
-            furnished = st.selectbox("Furnished", ["No", "Semi", "Yes"])
-
-        listed_rent = st.number_input(
-            "Current / listed monthly rent (Rp)", 500_000, 50_000_000, 4_000_000, 100_000
-        )
-        submitted = st.form_submit_button("Analyze Rent", type="primary")
-
-    if not submitted:
-        return
-
-    result = estimate_rent(
-        rental_model,
-        {
-            "area": area,
-            "property_type": property_type,
-            "bedrooms": bedrooms,
-            "bathrooms": bathrooms,
-            "size_m2": size_m2,
-            "furnished": furnished,
-            "listed_rent": listed_rent,
-        },
-    )
-
-    show_result_card(
-        "Rental price status",
-        result["status"],
-        "HABIT compares this listing with rental patterns learned from the reference dataset.",
-    )
-
-    col1, col2 = st.columns([1, 1.7])
-    col1.metric("Listed Rent", format_idr(listed_rent))
-    with col2:
-        st.markdown(
-            f"""
-            <div class="rent-range-card">
-                <div class="rent-range-label">Recommended Monthly Range</div>
-                <div class="rent-range-value">{format_idr(result['lower'])} – {format_idr(result['upper'])}</div>
-                <div class="rent-range-note">Based on similar property patterns in the reference dataset.</div>
+        <div class="side-brand">
+            <div class="brand-icon">⌂</div>
+            <div>
+                <h2>HABIT</h2>
+                <p>SMART HOME LIVING ASSISTANT</p>
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    difference = result["difference_pct"]
-    if result["status"] == "Higher Than Recommended":
-        st.info(
-            f"The listed rent is about {difference:.1f}% higher than the top of the recommended range "
-            f"({format_idr(result['upper'])})."
-        )
-    elif result["status"] == "Lower Than Recommended":
-        st.info(
-            f"The listed rent is about {difference:.1f}% lower than the bottom of the recommended range "
-            f"({format_idr(result['lower'])})."
-        )
-    else:
-        st.success("The listed rent falls within HABIT's recommended monthly range.")
-
-
-def show_monthly_bills():
-    show_header(
-        "Monthly Bills",
-        "Add your regular monthly costs and HABIT will summarize where your living expenses go.",
-    )
-
-    with st.form("bills_form"):
-        col1, col2 = st.columns(2)
-        with col1:
-            rent = st.number_input("Rent", 0, 50_000_000, 4_000_000, 100_000)
-            electricity = st.number_input("Electricity", 0, 10_000_000, 400_000, 50_000)
-            water = st.number_input("Water", 0, 5_000_000, 100_000, 25_000)
-        with col2:
-            internet = st.number_input("Internet", 0, 5_000_000, 350_000, 50_000)
-            other = st.number_input("Other", 0, 10_000_000, 150_000, 50_000)
-        submitted = st.form_submit_button("Calculate Monthly Cost", type="primary")
-
-    if not submitted:
-        return
-
-    result = bill_summary(rent, electricity, water, internet, other)
-    show_result_card(
-        "Estimated monthly living cost",
-        format_idr(result["total"]),
-        f"Largest expense category: {result['largest']}",
-    )
-
-    chart = px.bar(
-        x=list(result["values"].keys()),
-        y=list(result["values"].values()),
-        text_auto=".2s",
-        color_discrete_sequence=["#47655a"],
-    )
-    chart.update_layout(
-        height=360,
-        showlegend=False,
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(255,255,255,.65)",
-        yaxis_title="Rp",
-        xaxis_title="",
-    )
-    st.plotly_chart(chart, use_container_width=True)
-
-
-def show_energy_usage(energy_models):
-    show_header(
-        "Energy Usage",
-        "Enter your household profile and monthly electricity usage. HABIT will check whether the usage looks typical or unusual.",
-    )
-
-    with st.form("energy_form"):
-        col1, col2 = st.columns(2)
-        with col1:
-            residents = st.number_input("Residents", 1, 10, 2)
-            home_type = st.selectbox("Home type", ["Boarding Room", "Apartment", "House"])
-            month = st.selectbox("Month", list(range(1, 13)), index=datetime.now().month - 1)
-        with col2:
-            ac_hours = st.number_input("Average AC use per day (hours)", 0.0, 24.0, 4.0, 0.5)
-            usage = st.number_input("Monthly electricity usage (kWh)", 1.0, 3000.0, 150.0, 1.0)
-        submitted = st.form_submit_button("Check Energy Usage", type="primary")
-
-    if not submitted:
-        return
-
-    regression_model, anomaly_preprocessor, anomaly_model = energy_models
-    result = analyze_energy(
-        regression_model,
-        anomaly_preprocessor,
-        anomaly_model,
-        {
-            "residents": residents,
-            "home_type": home_type,
-            "month": month,
-            "ac_hours_per_day": ac_hours,
-            "monthly_usage_kwh": usage,
-        },
-    )
-
-    show_result_card(
-        "Energy usage status",
-        result["status"],
-        "Isolation Forest checks whether this usage pattern differs from similar reference observations.",
-    )
-
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Your Usage", f"{usage:.1f} kWh")
-    col2.metric("Expected Usage", f"{result['expected']:.1f} kWh")
-    col3.metric("Typical Range", f"{result['lower']:.0f}–{result['upper']:.0f} kWh")
-
-    difference = result["difference_pct"]
-    direction = "above" if difference >= 0 else "below"
-    st.info(
-        f"Your entered usage is about {abs(difference):.1f}% {direction} "
-        "the expected usage for a similar household profile."
-    )
-    st.caption(
-        f"Anomaly score: {result['anomaly_score']:.3f}. "
-        "This score is not a probability and does not diagnose electrical problems."
-    )
-
-
-def show_maintenance(maintenance_model):
-    show_header(
-        "Maintenance",
-        "Estimate how long a maintenance request may take based on queue conditions, request type, and technician availability.",
-    )
-
-    with st.form("maintenance_form"):
-        col1, col2 = st.columns(2)
-        with col1:
-            issue_type = st.selectbox(
-                "Issue type",
-                ["Air Conditioner", "Plumbing", "Electricity", "Internet", "Door/Lock", "Other"],
-            )
-            priority = st.selectbox("Priority", ["Low", "Normal", "High"], index=1)
-            queue_length = st.number_input("Requests ahead", 0, 30, 4)
-        with col2:
-            technicians = st.number_input("Technicians available", 1, 10, 2)
-            request_hour = st.slider("Request hour", 8, 20, 13)
-            days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-            day_of_week = st.selectbox("Day", range(7), format_func=lambda day: days[day])
-        submitted = st.form_submit_button("Estimate Waiting Time", type="primary")
-
-    if not submitted:
-        return
-
-    result = estimate_wait(
-        maintenance_model,
-        {
-            "issue_type": issue_type,
-            "priority": priority,
-            "queue_length": queue_length,
-            "technicians_available": technicians,
-            "request_hour": request_hour,
-            "day_of_week": day_of_week,
-        },
-    )
-
-    show_result_card(
-        "Estimated waiting time",
-        f"{result['minutes']:.0f} minutes",
-        f"{result['label']} based on similar historical maintenance conditions.",
-    )
-    st.metric("Estimated Range", f"{result['low']:.0f}–{result['high']:.0f} minutes")
-    st.caption("This is an estimate, not a guaranteed service time.")
-
-
-def main():
-    with STYLE_PATH.open("r", encoding="utf-8") as file:
-        st.markdown(f"<style>{file.read()}</style>", unsafe_allow_html=True)
-
-    rental_model, energy_models, maintenance_model = get_models()
-
-    st.sidebar.markdown(
-        """
-        <div class="habit-brand">
-            <div class="habit-name">HABIT</div>
-            <div class="habit-sub">Smart living assistant</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
-
-    page = st.sidebar.radio(
-        "Navigation", ["Home", "Rent Check", "Monthly Bills", "Energy Usage", "Maintenance"]
+    page = st.radio(
+        "Navigation",
+        ["Home Scan", "Maintenance", "Property Estimate", "Home Report"],
+        label_visibility="collapsed",
     )
-
-    if page == "Home":
-        show_home()
-    elif page == "Rent Check":
-        show_rent_check(rental_model)
-    elif page == "Monthly Bills":
-        show_monthly_bills()
-    elif page == "Energy Usage":
-        show_energy_usage(energy_models)
-    else:
-        show_maintenance(maintenance_model)
-
-
-if __name__ == "__main__":
-    main()
+if page == "Home Scan":
+    st.markdown("<p class='eyebrow'>HOME SCAN</p>", unsafe_allow_html=True)
+    st.title("Analyze Your Home")
+    st.caption(
+        "Upload up to five home photos and select the area manually. "
+        "HABIT will analyze the visual condition of each image."
+    )
+    upload_col, result_col = st.columns([0.95, 1.35], gap="large")
+    with upload_col:
+        with st.container(border=True):
+            st.subheader("Home Images")
+            files = st.file_uploader(
+                "Upload images",
+                type=["jpg", "jpeg", "png"],
+                accept_multiple_files=True,
+                key="home_images",
+            )
+            if len(files) > 5:
+                st.warning("Use a maximum of 5 images.")
+                files = files[:5]
+            images = []
+            areas = []
+            for index, file in enumerate(files):
+                image = Image.open(file).convert("RGB")
+                images.append(image)
+                st.image(preview_image(image), use_container_width=True)
+                area = st.selectbox(
+                    "Area",
+                    AREAS,
+                    key=f"home_area_{index}_{file.name}",
+                )
+                areas.append(area)
+            if files and st.button(
+                "Analyze Home",
+                type="primary",
+                use_container_width=True,
+            ):
+                with st.spinner("Analyzing home images..."):
+                    st.session_state.home_result = analyze_home(images, areas)
+            st.caption(
+                "The pretrained model downloads once on the first run "
+                "and is cached afterward."
+            )
+    with result_col:
+        result = st.session_state.home_result
+        with st.container(border=True):
+            st.subheader("Overall Home Condition")
+            if result is None:
+                st.write("Upload images and click **Analyze Home**.")
+            else:
+                condition_col, score_col = st.columns([3, 1])
+                with condition_col:
+                    st.markdown(f"### {result['overall_condition']}")
+                    st.write(condition_text(result["overall_condition"]))
+                with score_col:
+                    st.caption("AVG. CONFIDENCE")
+                    st.markdown(f"### {result['average_confidence']:.0%}")
+                    st.progress(result["average_confidence"])
+        with st.container(border=True):
+            st.subheader("Area Results")
+            if result is None:
+                st.write("Area results will appear here in the same 4:3 format.")
+            else:
+                items = result["areas"]
+                for start in range(0, len(items), 2):
+                    columns = st.columns(2)
+                    for position, item in enumerate(items[start:start + 2]):
+                        with columns[position]:
+                            st.image(
+                                preview_image(item["image"]),
+                                use_container_width=True,
+                            )
+                            st.markdown(
+                                f"**{item['area']} · {item['condition']}**"
+                            )
+                            st.caption(
+                                f"Confidence {item['confidence']:.0%}"
+                            )
+        with st.container(border=True):
+            st.subheader("Result Details")
+            if result is None:
+                st.write("Short result details will appear after analysis.")
+            else:
+                st.write(
+                    f"**Images analyzed:** {len(result['areas'])}  \n"
+                    f"**Overall result:** {result['overall_condition']}  \n"
+                    f"**Average confidence:** {result['average_confidence']:.0%}"
+                )
+elif page == "Maintenance":
+    st.markdown("<p class='eyebrow'>MAINTENANCE</p>", unsafe_allow_html=True)
+    st.title("Check Visible Building Defects")
+    st.caption(
+        "Upload a wall, ceiling, or surface image for visual defect detection."
+    )
+    upload_col, result_col = st.columns(2, gap="large")
+    with upload_col:
+        with st.container(border=True):
+            st.subheader("Maintenance Image")
+            area = st.selectbox("Area", AREAS, key="maintenance_area")
+            file = st.file_uploader(
+                "Upload a wall or surface image",
+                type=["jpg", "jpeg", "png"],
+                key="maintenance_image",
+            )
+            image = None
+            if file is not None:
+                image = Image.open(file).convert("RGB")
+                st.image(preview_image(image), use_container_width=True)
+            if not maintenance_model_ready():
+                st.info("Train once with `python train_maintenance.py`.")
+            if st.button(
+                "Analyze Maintenance",
+                type="primary",
+                disabled=image is None or not maintenance_model_ready(),
+                use_container_width=True,
+            ):
+                with st.spinner("Checking visible defect..."):
+                    result = analyze_maintenance(image)
+                result["area"] = area
+                st.session_state.maintenance_result = result
+    with result_col:
+        result = st.session_state.maintenance_result
+        with st.container(border=True):
+            st.subheader("Maintenance Result")
+            if not maintenance_model_ready():
+                st.write("The maintenance model is not trained yet.")
+            elif result is None:
+                st.write("Upload an image and click **Analyze Maintenance**.")
+            else:
+                st.caption(result["area"].upper())
+                st.markdown(f"### {result['label']}")
+                st.progress(result["confidence"])
+                st.caption(f"Confidence {result['confidence']:.0%}")
+        with st.container(border=True):
+            st.subheader("Maintenance Details")
+            if result is None:
+                st.write("A short maintenance note will appear here.")
+            else:
+                st.write(f"**Area:** {result['area']}")
+                st.write(f"**Visual finding:** {result['label']}")
+                st.write(f"**Suggested check:** {result['note']}")
+elif page == "Property Estimate":
+    st.markdown(
+        "<p class='eyebrow'>PROPERTY ESTIMATE</p>",
+        unsafe_allow_html=True,
+    )
+    st.title("Estimate Indonesian Property Price")
+    st.caption(
+        "Uses Indonesian housing-market data. "
+        "The result is a price reference, not a professional appraisal."
+    )
+    with st.container(border=True):
+        st.subheader("Property Information")
+        first_col, second_col = st.columns(2)
+        with first_col:
+            province = st.selectbox("Province", PROVINCES)
+            subsidy_status = st.selectbox(
+                "Housing category",
+                ["komersil", "subsidi"],
+            )
+            land_area = st.number_input(
+                "Land area (m²)",
+                min_value=1.0,
+                value=72.0,
+            )
+            building_area = st.number_input(
+                "Building area (m²)",
+                min_value=1.0,
+                value=36.0,
+            )
+        with second_col:
+            bedrooms = st.number_input("Bedrooms", min_value=0, value=2)
+            bathrooms = st.number_input("Bathrooms", min_value=0, value=1)
+            floors = st.number_input("Floors", min_value=1, value=1)
+            property_type = st.selectbox("Property type", ["Rumah Tapak"])
+        if not property_model_ready():
+            st.info("Train once with `python train_property.py`.")
+        if st.button(
+            "Estimate Property Price",
+            type="primary",
+            disabled=not property_model_ready(),
+            use_container_width=True,
+        ):
+            info = {
+                "province": province,
+                "subsidy_status": subsidy_status,
+                "land_area_m2": land_area,
+                "building_area_m2": building_area,
+                "bedrooms": bedrooms,
+                "bathrooms": bathrooms,
+                "floors": floors,
+                "property_type": property_type,
+            }
+            try:
+                with st.spinner("Estimating Indonesian property price..."):
+                    result = estimate_property_price(info)
+                st.session_state.property_result = result
+            except Exception as error:
+                st.error(
+                    "Property estimation could not run. "
+                    "Please retrain the property model and try again."
+                )
+                st.caption(str(error))
+    result = st.session_state.property_result
+    if result is not None:
+        price_col, range_col = st.columns(2)
+        with price_col:
+            with st.container(border=True):
+                st.caption("ESTIMATED PRICE")
+                st.markdown(f"## Rp{result['price']:,.0f}")
+                st.write("Estimated Indonesian property price.")
+        with range_col:
+            with st.container(border=True):
+                st.caption("ESTIMATED RANGE")
+                st.markdown(
+                    f"### Rp{result['min']:,.0f} – Rp{result['max']:,.0f}"
+                )
+                st.write(f"Validation MAE: Rp{result['mae']:,.0f}")
+else:
+    st.markdown("<p class='eyebrow'>HOME REPORT</p>", unsafe_allow_html=True)
+    st.title("Home Report")
+    st.caption(
+        "Summary of the latest Home Scan, Maintenance, "
+        "and Property Estimate."
+    )
+    home = st.session_state.home_result
+    maintenance = st.session_state.maintenance_result
+    property_result = st.session_state.property_result
+    columns = st.columns(3)
+    with columns[0]:
+        with st.container(border=True):
+            st.caption("HOME CONDITION")
+            if home is None:
+                st.markdown("### Not analyzed")
+            else:
+                st.markdown(f"### {home['overall_condition']}")
+                st.write(f"{len(home['areas'])} area(s) analyzed")
+    with columns[1]:
+        with st.container(border=True):
+            st.caption("MAINTENANCE")
+            if maintenance is None:
+                st.markdown("### Not checked")
+            else:
+                st.markdown(f"### {maintenance['label']}")
+                st.write(maintenance["area"])
+    with columns[2]:
+        with st.container(border=True):
+            st.caption("PROPERTY")
+            if property_result is None:
+                st.markdown("### Not estimated")
+            else:
+                st.markdown(f"### Rp{property_result['price']:,.0f}")
+                st.write("Estimated property price")
+    with st.container(border=True):
+        st.subheader("Summary")
+        if home is None and maintenance is None and property_result is None:
+            st.write("Complete one of the analyses to generate a report.")
+        else:
+            if home is not None:
+                st.write(
+                    f"• Home condition: **{home['overall_condition']}**"
+                )
+            if maintenance is not None:
+                st.write(
+                    f"• Maintenance: **{maintenance['label']}** "
+                    f"in **{maintenance['area']}**"
+                )
+            if property_result is not None:
+                st.write(
+                    f"• Property reference: "
+                    f"**Rp{property_result['price']:,.0f}**"
+                )

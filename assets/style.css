@@ -1,211 +1,199 @@
 :root {
-  --muted: #69726c;
-  --border: #d3dad4;
-  --accent: #3f6758;
-  --accent-dark: #315044;
+    --green: #2f4a3c;
+    --cream: #f4f4ef;
+    --white: #ffffff;
+    --ink: #171a18;
+    --border: rgba(47, 74, 60, 0.18);
+    --radius: 12px;
+    --radius-small: 8px;
 }
-
-html, body, [class*="css"] {
-  font-family: Inter, "Segoe UI", Arial, sans-serif;
+html,
+body,
+.stApp,
+[data-testid="stAppViewContainer"] {
+    background: var(--cream);
+    color: var(--ink);
 }
-
-.stApp {
-  background-image:
-    radial-gradient(circle at 86% 7%, rgba(63,103,88,.07), transparent 24rem),
-    radial-gradient(circle at 8% 88%, rgba(63,103,88,.045), transparent 22rem),
-    linear-gradient(rgba(63,103,88,.028) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(63,103,88,.028) 1px, transparent 1px);
-  background-size: auto, auto, 32px 32px, 32px 32px;
-}
-
 .block-container {
-  max-width: 1160px;
-  padding: 2.1rem 0 4rem;
+    max-width: 1180px;
+    padding: 3.5rem 1.5rem 3rem;
 }
-
-[data-testid="stSidebar"] { border-right: 1px solid var(--border); }
-[data-testid="stSidebar"] > div:first-child { padding-top: 1.35rem; }
-
-.habit-brand {
-  margin-bottom: 1rem;
-  padding: .45rem .2rem 1.2rem;
-  border-bottom: 1px solid var(--border);
+[data-testid="stHeader"],
+[data-testid="stToolbar"] {
+    background: var(--white) !important;
+    color: var(--ink) !important;
+    border-bottom: 1px solid var(--border);
 }
-
-.habit-name {
-  display: inline-flex; align-items: center; gap: .5rem;
-  font-size: 1.2rem; font-weight: 820; letter-spacing: .16em;
+[data-testid="stHeader"] button,
+[data-testid="stToolbar"] button {
+    background: transparent !important;
+    color: var(--ink) !important;
 }
-
-.habit-name::before {
-  content: ""; width: 11px; height: 11px; margin-right: .2rem;
-  border-radius: 3px; background: var(--accent);
-  box-shadow: 8px 8px 0 rgba(63,103,88,.24);
+[data-testid="stHeader"] svg,
+[data-testid="stToolbar"] svg {
+    color: var(--ink) !important;
+    fill: var(--ink) !important;
 }
-
-.habit-sub { margin-top: .35rem; font-size: .77rem; }
-
-.hero,
-.result-hero {
-  position: relative; overflow: hidden;
-  border: 1px solid var(--border);
-  box-shadow: 0 12px 28px rgba(44,62,51,.055);
+[data-testid="stSidebar"] {
+    background: var(--green);
+    border-right: 0;
 }
-
-.hero {
-  margin: .9rem 0 1.5rem;
-  padding: 1.55rem 1.65rem 1.5rem 1.8rem;
-  border-radius: 18px; background: rgba(255,255,255,.70);
+[data-testid="stSidebar"] * {
+    color: var(--cream);
 }
-
-.hero::before,
-.result-hero::before {
-  content: ""; position: absolute; inset: 0 auto 0 0;
-  background: var(--accent);
+[data-testid="stSidebar"] .stRadio label {
+    padding: 10px 12px;
+    margin-bottom: 4px;
+    border-radius: var(--radius-small);
 }
-
-.hero::before { width: 5px; }
-.result-hero::before { width: 4px; }
-
-.hero::after {
-  content: ""; position: absolute; width: 165px; height: 165px;
-  right: -70px; top: -90px;
-  border: 24px solid rgba(63,103,88,.055); border-radius: 50%;
-  pointer-events: none;
+[data-testid="stSidebar"] .stRadio label:hover,
+[data-testid="stSidebar"] .stRadio label:has(input:checked) {
+    background: rgba(244, 244, 239, 0.12);
 }
-
-.kicker,
-.result-label { color: var(--accent); text-transform: uppercase; }
-
-.kicker {
-  margin-bottom: .45rem;
-  font-size: .74rem; font-weight: 760; letter-spacing: .105em;
+.side-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 8px 0 28px;
 }
-
-.hero h1 {
-  margin: 0;
-  font-size: clamp(2.15rem, 5vw, 3.45rem); font-weight: 790;
-  line-height: 1; letter-spacing: -.047em;
+.brand-icon {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius);
+    background: var(--cream);
+    color: var(--green) !important;
+    font-size: 24px;
+    font-weight: 700;
 }
-
-.hero p {
-  max-width: 760px; margin: .8rem 0 0;
-  font-size: .98rem; line-height: 1.65;
+.side-brand h2 {
+    margin: 0;
+    font-size: 24px;
 }
-
-.panel {
-  margin-bottom: 1rem; padding: 1.05rem 1.1rem;
-  border: 1px solid var(--border); border-radius: 14px;
-  background: rgba(255,255,255,.82);
-  box-shadow: 0 8px 20px rgba(44,62,51,.035);
+.side-brand p {
+    margin: 3px 0 0;
+    font-size: 12px;
+    letter-spacing: 0.8px;
 }
-
-.result-hero {
-  margin: .85rem 0 1rem; padding: 1.15rem 1.2rem 1.15rem 1.35rem;
-  border-radius: 15px; background: #fff;
+.eyebrow {
+    margin-bottom: 6px;
+    color: var(--green) !important;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
 }
-
-.result-label {
-  font-size: .75rem; font-weight: 760; letter-spacing: .085em;
+h1,
+h2,
+h3,
+h4,
+p,
+label {
+    color: var(--ink);
 }
-
-.result-value {
-  margin-top: .28rem;
-  font-size: 1.85rem; font-weight: 790; letter-spacing: -.04em;
+h1 {
+    margin-bottom: 6px !important;
+    font-size: 40px !important;
 }
-
-.result-note {
-  margin-top: .45rem; font-size: .88rem; line-height: 1.55;
+[data-testid="stHorizontalBlock"],
+div[data-testid="stVerticalBlock"] {
+    gap: 1rem !important;
 }
-
-div[data-testid="stMetric"],
-.rent-range-card {
-  border: 1px solid var(--border); border-radius: 13px;
-  box-shadow: 0 6px 16px rgba(44,62,51,.028);
+[data-testid="stVerticalBlockBorderWrapper"] {
+    background: var(--white);
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius) !important;
+    padding: 12px !important;
+    box-shadow: none;
 }
-
-div[data-testid="stMetric"] {
-  padding: .9rem 1rem; background: rgba(255,255,255,.84);
+[data-baseweb="input"],
+[data-baseweb="select"] > div,
+.stNumberInput div[data-baseweb="input"] {
+    background: var(--white) !important;
+    color: var(--ink) !important;
+    border-color: var(--border) !important;
+    border-radius: var(--radius-small) !important;
 }
-
-div[data-testid="stMetric"]:hover { border-color: #bcc8c0; }
-
-div[data-testid="stMetric"] label {
-  color: var(--muted); font-weight: 560;
+[data-baseweb="input"]:focus-within,
+[data-baseweb="select"] > div:focus-within {
+    border-color: var(--green) !important;
+    box-shadow: none !important;
 }
-
-div[data-testid="stMetricValue"] { letter-spacing: -.035em; }
-
-[data-testid="stForm"] {
-  padding: 1rem 1rem .85rem !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 16px !important;
-  background: rgba(255,255,255,.48);
-  box-shadow: 0 8px 20px rgba(44,62,51,.028);
+[role="listbox"],
+[role="option"] {
+    background: var(--white) !important;
+    color: var(--ink) !important;
 }
-
-div[data-baseweb="select"] > div,
-div[data-testid="stNumberInput"] div[data-baseweb="input"] {
-  border: 1px solid var(--accent) !important;
-  background: #f7f8f5 !important;
-  box-shadow: none !important;
+[data-testid="stFileUploader"] section {
+    background: var(--white);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
 }
-
-div[data-baseweb="select"] > div:focus-within,
-div[data-testid="stNumberInput"] div[data-baseweb="input"]:focus-within {
-  border-color: var(--accent-dark) !important;
-  box-shadow: 0 0 0 1px var(--accent-dark) !important;
+[data-testid="stFileUploader"] button,
+.stButton button[kind="secondary"],
+.stNumberInput button {
+    background: var(--white) !important;
+    color: var(--ink) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-small) !important;
 }
-
-.stButton > button,
-.stFormSubmitButton > button {
-  padding: 0 1rem; border-radius: 10px; font-weight: 680;
-  transition: transform .14s ease;
+.stNumberInput button {
+    width: 34px;
+    height: 34px;
+    padding: 0 !important;
+    color: var(--green) !important;
 }
-
-.stButton > button:hover,
-.stFormSubmitButton > button:hover { transform: translateY(-1px); }
-
-.rent-range-card {
-  min-height: 102px; padding: .9rem 1rem;
-  background: linear-gradient(180deg, #ffffff 0%, #f8faf8 100%);
+.stNumberInput button:hover,
+.stNumberInput button:focus {
+    background: var(--green) !important;
+    color: var(--white) !important;
 }
-
-.rent-range-label {
-  margin-bottom: .32rem; color: var(--muted); font-size: .81rem;
+.stButton button[kind="primary"] {
+    width: 100%;
+    background: var(--green) !important;
+    color: var(--white) !important;
+    border: 1px solid var(--green) !important;
+    border-radius: var(--radius-small) !important;
+    font-weight: 700;
 }
-
-.rent-range-value {
-  font-size: clamp(1.25rem, 2vw, 1.82rem); font-weight: 720;
-  line-height: 1.25; letter-spacing: -.035em; overflow-wrap: anywhere;
+.stButton button[kind="primary"]:hover,
+.stButton button[kind="primary"]:focus,
+.stButton button[kind="primary"]:active {
+    background: var(--cream) !important;
+    color: var(--green) !important;
 }
-
-.rent-range-note { margin-top: .42rem; font-size: .75rem; }
-
+.stButton button:disabled {
+    background: var(--cream) !important;
+    color: rgba(23, 26, 24, 0.55) !important;
+    border-color: var(--border) !important;
+}
+[data-testid="stProgress"] > div > div {
+    background: var(--cream);
+    border: 0;
+}
+[data-testid="stProgress"] > div > div > div {
+    background: var(--green);
+}
 [data-testid="stAlert"] {
-  border: 1px solid rgba(63,103,88,.16); border-radius: 12px;
+    background: var(--white) !important;
+    color: var(--ink) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius) !important;
 }
-
-[data-testid="stPlotlyChart"] {
-  padding: .35rem; border: 1px solid var(--border);
-  border-radius: 14px; background: rgba(255,255,255,.52);
+footer {
+    display: none !important;
 }
-
-[data-testid="stCaptionContainer"],
-[data-testid="stCaptionContainer"] p,
-.result-note,
-.rent-range-note,
-.habit-sub,
-.hero p { color: var(--muted) !important; }
-
-@media (max-width: 760px) {
-  .block-container { padding: 1.15rem 1rem 4rem; }
-
-  .hero {
-    margin-top: .7rem; padding: 1.25rem 1.1rem 1.2rem 1.3rem;
-    border-radius: 14px;
-  }
-
-  .hero h1 { font-size: 2.25rem; }
-  .rent-range-value { font-size: 1.15rem; }
+#MainMenu {
+    visibility: hidden;
+}
+@media (max-width: 800px) {
+    .block-container {
+        padding: 2.5rem 1rem;
+    }
+    h1 {
+        font-size: 32px !important;
+    }
+    [data-testid="stHorizontalBlock"] {
+        gap: 0.75rem !important;
+    }
 }

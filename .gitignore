@@ -1,11 +1,6 @@
-__pycache__/
-*.py[cod]
 .venv/
-venv/
-.env
-.streamlit/secrets.toml
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
-*.log
+__pycache__/
+*.pyc
+models/*.pth
+models/*.joblib
+models/*.json
