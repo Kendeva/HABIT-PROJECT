@@ -3,6 +3,7 @@
 HABIT is an AI-based application designed to help users understand a home's visual condition, identify visible maintenance issues, and estimate property prices using Indonesian housing data.
 
 > Computer Science Project — BINUS University, Semester 5
+LIVE APP : https://habit-project.streamlit.app/
 
 ---
 
