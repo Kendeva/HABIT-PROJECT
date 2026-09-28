@@ -1,68 +1,74 @@
 # HABIT — Smart Home Living Assistant
 
-HABIT has three main AI/ML features:
+HABIT adalah aplikasi berbasis AI untuk membantu pengguna menganalisis kondisi visual rumah, mendeteksi masalah maintenance pada permukaan bangunan, dan memberikan estimasi harga properti berdasarkan data perumahan Indonesia.
 
-1. Home Condition — pretrained ViT
-2. Maintenance Detection — Custom CNN trained for this project
-3. Indonesian Property Estimate — regression model trained for this project
+> Project Computer Science — BINUS University Semester 5
 
-## Datasets and Models
+---
 
-### Home Condition
-Pretrained Hugging Face model:
+## Fitur
 
-`DejanX13/vit-house-classifier`
+- **Home Scan** — menganalisis kondisi visual beberapa area rumah
+- **Maintenance Detection** — mendeteksi masalah visual seperti crack, peeling, stain, algae, dan spalling
+- **Property Estimate** — memberikan estimasi harga properti berdasarkan data perumahan Indonesia
+- **Home Report** — merangkum hasil Home Scan, Maintenance, dan Property Estimate
 
-No local training is needed for this feature.
+---
 
-### Maintenance Detection
-Dataset:
-
-`chandrabhuma/building_defect_vqa`
-
-The dataset contains 3,965 building-surface images with seven defect labels.
-The project trains a simple Custom CNN.
-
-Train:
-
-```bash
-python train_maintenance.py
-```
-
-Output:
+## Pipeline
 
 ```text
-models/maintenance_cnn.pth
+Home Images
+    ↓
+Pretrained ViT
+    ↓
+Home Condition
+
+Maintenance Image
+    ↓
+Custom CNN
+    ↓
+Maintenance Result
+
+Property Information
+    ↓
+Regression Model
+    ↓
+Estimated Price + Estimated Range
 ```
 
-### Indonesian Property Estimate
-Dataset:
+---
 
-`web3hungry/indonesia-affordable-housing`
+## AI / ML Model
 
-The source contains Indonesian housing records. HABIT uses a maximum sample of
-5,000 cleaned records so local training stays realistic for a student project.
+| Fitur | Model | Status |
+|---|---|---|
+| Home Scan | Pretrained ViT | Pretrained |
+| Maintenance Detection | Custom CNN | Trained for HABIT |
+| Property Estimate | HistGradientBoostingRegressor | Trained for HABIT |
 
-Train:
+HABIT menggabungkan **Deep Learning** dan **Machine Learning**. Home Scan menggunakan model vision yang sudah pretrained, sedangkan Custom CNN dan Regression Model dilatih khusus untuk project ini.
 
-```bash
-python train_property.py
-```
+---
 
-Output:
+## Dataset
+
+Dataset tidak disimpan langsung di repository. Dataset akan diambil melalui Hugging Face saat proses training.
+
+| Dataset | Digunakan untuk | Sumber |
+|---|---|---|
+| `chandrabhuma/building_defect_vqa` | Maintenance Detection | Hugging Face |
+| `web3hungry/indonesia-affordable-housing` | Property Estimate | Hugging Face |
+| `DejanX13/vit-house-classifier` | Home Condition | Hugging Face pretrained model |
+
+Untuk Property Estimate, proses training menggunakan maksimal **5.000 data yang sudah melalui cleaning** agar tetap realistis untuk project mahasiswa dan lebih ringan dijalankan secara lokal.
+
+---
+
+## Struktur Project
 
 ```text
-models/property_model.joblib
-```
-
-The property prediction input is passed as a pandas DataFrame with the same
-column names used during training. This avoids the ColumnTransformer error:
-"Specifying the columns using strings is only supported for dataframes."
-
-## Project Structure
-
-```text
-HABIT_final_fixed/
+HABIT/
 ├── app.py
 ├── model.py
 ├── options.py
@@ -73,90 +79,92 @@ HABIT_final_fixed/
 ├── assets/
 │   └── style.css
 └── models/
+    ├── maintenance_cnn.pth
+    └── property_model.joblib
 ```
 
-## Install and Run
+---
 
-Create virtual environment:
+## Cara Menjalankan
+
+### 1. Buat virtual environment
 
 ```bash
 python -m venv .venv
 ```
 
-Activate on Windows:
+### 2. Aktifkan virtual environment
+
+Windows:
 
 ```bash
 .venv\Scripts\activate
 ```
 
-Install packages:
+### 3. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Train Maintenance:
+### 4. Training model
+
+Maintenance:
 
 ```bash
 python train_maintenance.py
 ```
 
-Train Property Estimate:
+Property Estimate:
 
 ```bash
 python train_property.py
 ```
 
-Run HABIT:
+Home Scan tidak perlu ditrain karena menggunakan pretrained model.
+
+### 5. Jalankan aplikasi
 
 ```bash
 streamlit run app.py
 ```
 
-## UI Colors
-
-The CSS uses only four priority colors:
-
-- `#2F4A3C` — deep green
-- `#F4F4EF` — off-white
-- `#FFFFFF` — white
-- `#171A18` — dark text
-
-The footer and bottom area use light backgrounds.
-
-## Notes
-
-- Home Scan uses a pretrained model.
-- Maintenance CNN is trained by you.
-- Property regression model is trained by you.
-- HABIT outputs are AI-assisted references, not professional inspections or appraisals.
-
-
-## Property Range Improvement
-
-The property model now predicts `log(price)` instead of raw price. This reduces
-the effect of extreme property prices.
-
-The estimated range is no longer calculated as only `price ± MAE`.
-It is calibrated from real validation residuals:
-
-- 80% of data is used for training.
-- 10% is used to calibrate the estimated range.
-- 10% is used as a final test set.
-- The lower and upper range use the 10th and 90th percentile of calibration
-  residuals.
-
-`property_metrics.json` also stores the actual test-set range coverage so the
-range can be evaluated instead of guessed.
-
-After this update, retrain the property model:
-
-```bash
-python train_property.py
-```
-
-Then run:
+Jika model sudah pernah ditrain dan file model masih ada di folder `models/`, cukup jalankan:
 
 ```bash
 streamlit run app.py
 ```
+
+---
+
+## Author
+
+**Keanu**
+
+---
+
+## Limitations
+
+- **Home Condition belum spesifik untuk rumah Indonesia** — Home Scan masih menggunakan pretrained model umum, sehingga karakteristik rumah Indonesia belum sepenuhnya terwakili.
+- **Maintenance masih bergantung pada kualitas gambar** — pencahayaan, sudut pengambilan gambar, jarak, dan kondisi permukaan dapat memengaruhi hasil prediksi.
+- **Property Estimate masih menggunakan fitur yang terbatas** — model belum mempertimbangkan semua faktor yang memengaruhi harga properti seperti akses jalan, fasilitas sekitar, usia bangunan, dan kondisi pasar secara langsung.
+- **Estimated Range masih memerlukan perbaikan** — rentang harga sudah menggunakan calibration dari validation residual, tetapi hasilnya masih belum selalu cukup dekat dengan harga aktual pada semua kasus.
+- **Dataset property dibatasi hingga 5.000 data** — pembatasan ini membuat training lebih ringan, tetapi juga dapat mengurangi representasi variasi properti Indonesia.
+- **Belum untuk penggunaan profesional** — hasil HABIT masih berupa AI-assisted reference dan tidak menggantikan inspeksi bangunan atau appraisal properti profesional.
+
+---
+
+## Future Work
+
+- Meningkatkan **Property Estimate** dengan feature engineering dan model regression yang lebih akurat.
+- Memperbaiki **Estimated Range** agar lebih stabil dan lebih dekat dengan harga aktual.
+- Menambah dan mengevaluasi dataset visual rumah Indonesia untuk Home Scan.
+- Meningkatkan generalisasi Maintenance Detection pada kondisi gambar dan jenis bangunan yang lebih beragam.
+- Melakukan evaluasi model yang lebih lengkap menggunakan test data yang lebih representatif.
+- Mengoptimalkan inference agar aplikasi lebih cepat pada perangkat tanpa GPU.
+
+---
+
+## Status
+
+HABIT sudah dapat menjalankan seluruh alur utama project, tetapi beberapa bagian masih membutuhkan pengembangan lebih lanjut, terutama pada **akurasi Property Estimate, Estimated Range, dan generalisasi model visual**.
