@@ -154,14 +154,20 @@ class MaintenanceCNN(nn.Module):
 
         self.features = nn.Sequential(
             nn.Conv2d(3, 16, 3, padding=1),
+            nn.BatchNorm2d(16),
             nn.ReLU(),
             nn.MaxPool2d(2),
+
             nn.Conv2d(16, 32, 3, padding=1),
+            nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.MaxPool2d(2),
+
             nn.Conv2d(32, 64, 3, padding=1),
+            nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.MaxPool2d(2),
+
             nn.AdaptiveAvgPool2d((4, 4)),
         )
 
@@ -169,12 +175,14 @@ class MaintenanceCNN(nn.Module):
             nn.Flatten(),
             nn.Linear(64 * 4 * 4, 128),
             nn.ReLU(),
-            nn.Dropout(0.2),
+            nn.Dropout(0.3),
             nn.Linear(128, classes),
         )
 
     def forward(self, x):
-        return self.classifier(self.features(x))
+        return self.classifier(
+            self.features(x)
+        )
 
 
 maintenance_transform = transforms.Compose([
@@ -276,7 +284,6 @@ def estimate_property_price(info):
     range_low = float(
         saved.get("range_low", -0.20)
     )
-
     range_high = float(
         saved.get("range_high", 0.20)
     )
@@ -286,7 +293,6 @@ def estimate_property_price(info):
             prediction_log + range_low
         )
     )
-
     maximum = float(
         np.expm1(
             prediction_log + range_high

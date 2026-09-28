@@ -6,7 +6,11 @@ import numpy as np
 import pandas as pd
 from datasets import load_dataset
 from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import HistGradientBoostingRegressor
+from sklearn.ensemble import (
+    GradientBoostingRegressor,
+    HistGradientBoostingRegressor,
+    RandomForestRegressor,
+)
 from sklearn.impute import SimpleImputer
 from sklearn.metrics import (
     mean_absolute_error,
@@ -34,7 +38,7 @@ FEATURES = [
 TARGET = "price_idr"
 
 
-def build_model():
+def build_pipeline(regressor):
     numeric_columns = [
         "land_area_m2",
         "building_area_m2",
@@ -82,14 +86,6 @@ def build_model():
             categorical_columns,
         ),
     ])
-
-    regressor = HistGradientBoostingRegressor(
-        max_iter=220,
-        learning_rate=0.06,
-        max_leaf_nodes=31,
-        l2_regularization=0.2,
-        random_state=42,
-    )
 
     return Pipeline([
         ("preprocessing", preprocessing),
@@ -143,6 +139,7 @@ def main():
     X = dataframe[FEATURES]
     y = dataframe[TARGET]
 
+    # 80% train, 10% calibration/validation, 10% final test.
     X_train, X_temp, y_train, y_temp = train_test_split(
         X,
         y,
@@ -157,26 +154,81 @@ def main():
         random_state=42,
     )
 
-    model = build_model()
+    regressors = {
+        "HistGradientBoosting": HistGradientBoostingRegressor(
+            max_iter=220,
+            learning_rate=0.06,
+            max_leaf_nodes=31,
+            l2_regularization=0.2,
+            random_state=42,
+        ),
+        "RandomForest": RandomForestRegressor(
+            n_estimators=250,
+            max_depth=18,
+            min_samples_leaf=2,
+            random_state=42,
+            n_jobs=-1,
+        ),
+        "GradientBoosting": GradientBoostingRegressor(
+            n_estimators=180,
+            learning_rate=0.05,
+            max_depth=3,
+            random_state=42,
+        ),
+    }
 
     print(f"Records used: {len(dataframe):,}")
-    print("Training property model...")
+    print("Comparing regression models...")
 
-    # Log target reduces the effect of very expensive houses.
-    model.fit(
-        X_train,
-        np.log1p(y_train),
+    comparison = {}
+
+    for name, regressor in regressors.items():
+        model = build_pipeline(regressor)
+        model.fit(
+            X_train,
+            np.log1p(y_train),
+        )
+
+        validation_log = model.predict(X_calibration)
+        validation_predictions = np.expm1(validation_log)
+
+        validation_mae = mean_absolute_error(
+            y_calibration,
+            validation_predictions,
+        )
+        validation_r2 = r2_score(
+            y_calibration,
+            validation_predictions,
+        )
+
+        comparison[name] = {
+            "model": model,
+            "mae": float(validation_mae),
+            "r2": float(validation_r2),
+        }
+
+        print(
+            f"{name:<22} | "
+            f"Validation MAE: Rp{validation_mae:,.0f} | "
+            f"R²: {validation_r2:.4f}"
+        )
+
+    # Lowest MAE is the main criterion. R² is used as a tie-breaker.
+    selected_name = min(
+        comparison,
+        key=lambda name: (
+            comparison[name]["mae"],
+            -comparison[name]["r2"],
+        ),
     )
 
-    calibration_log = model.predict(X_calibration)
-    calibration_actual_log = np.log1p(y_calibration.to_numpy())
+    selected_model = comparison[selected_name]["model"]
 
-    residuals = (
-        calibration_actual_log
-        - calibration_log
-    )
+    # Calibrate the range only after the model has been selected.
+    calibration_log = selected_model.predict(X_calibration)
+    actual_calibration_log = np.log1p(y_calibration.to_numpy())
+    residuals = actual_calibration_log - calibration_log
 
-    # Calibrated 80% interval from real validation residuals.
     range_low = float(
         np.quantile(residuals, 0.10)
     )
@@ -187,19 +239,18 @@ def main():
     range_low = min(range_low, 0.0)
     range_high = max(range_high, 0.0)
 
-    test_log = model.predict(X_test)
+    # Final metrics are calculated only once on the untouched test set.
+    test_log = selected_model.predict(X_test)
     test_predictions = np.expm1(test_log)
 
     mae = mean_absolute_error(
         y_test,
         test_predictions,
     )
-
     rmse = mean_squared_error(
         y_test,
         test_predictions,
     ) ** 0.5
-
     r2 = r2_score(
         y_test,
         test_predictions,
@@ -213,60 +264,54 @@ def main():
     )
 
     actual = y_test.to_numpy()
-
     coverage = np.mean(
         (actual >= lower_predictions)
         & (actual <= upper_predictions)
     )
 
-    average_range_width = np.mean(
-        upper_predictions - lower_predictions
-    )
-
-    Path("models").mkdir(
-        exist_ok=True
-    )
+    Path("models").mkdir(exist_ok=True)
 
     joblib.dump(
         {
-            "model": model,
+            "model": selected_model,
             "mae": float(mae),
             "features": FEATURES,
             "range_low": range_low,
             "range_high": range_high,
             "range_coverage": float(coverage),
+            "selected_model": selected_name,
         },
         "models/property_model.joblib",
     )
 
     metrics = {
         "records_used": int(len(dataframe)),
+        "selected_model": selected_name,
         "mae": float(mae),
         "rmse": float(rmse),
         "r2": float(r2),
-        "estimated_range_coverage": float(coverage),
-        "average_range_width": float(average_range_width),
+        "range_coverage": float(coverage),
+        "validation_comparison": {
+            name: {
+                "mae": result["mae"],
+                "r2": result["r2"],
+            }
+            for name, result in comparison.items()
+        },
     }
 
-    Path(
-        "models/property_metrics.json"
-    ).write_text(
-        json.dumps(
-            metrics,
-            indent=2,
-        ),
+    Path("models/property_metrics.json").write_text(
+        json.dumps(metrics, indent=2),
         encoding="utf-8",
     )
 
     print()
-    print("Training complete.")
-    print(f"MAE      : Rp{mae:,.0f}")
-    print(f"RMSE     : Rp{rmse:,.0f}")
-    print(f"R²       : {r2:.4f}")
-    print(f"Coverage : {coverage:.2%}")
-    print(
-        "Saved: models/property_model.joblib"
-    )
+    print(f"Selected model : {selected_name}")
+    print(f"Test MAE       : Rp{mae:,.0f}")
+    print(f"Test RMSE      : Rp{rmse:,.0f}")
+    print(f"Test R²        : {r2:.4f}")
+    print(f"Range coverage : {coverage:.2%}")
+    print("Saved: models/property_model.joblib")
 
 
 if __name__ == "__main__":
