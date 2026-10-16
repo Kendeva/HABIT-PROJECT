@@ -1,0 +1,22 @@
+{
+  "records_used": 5000,
+  "selected_model": "RandomForest",
+  "mae": 151863618.5141261,
+  "rmse": 341235044.2736912,
+  "r2": 0.725839115957213,
+  "range_coverage": 0.772,
+  "validation_comparison": {
+    "HistGradientBoosting": {
+      "mae": 163842605.21561882,
+      "r2": 0.7591270571702864
+    },
+    "RandomForest": {
+      "mae": 155819374.49993342,
+      "r2": 0.7679218227210781
+    },
+    "GradientBoosting": {
+      "mae": 164046497.80037463,
+      "r2": 0.7702810426280553
+    }
+  }
+}
