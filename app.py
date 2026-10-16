@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import streamlit as st
 from PIL import Image, ImageOps
 
@@ -10,9 +12,11 @@ from model import (
 )
 from options import AREAS, PROVINCES
 
+BASE_DIR = Path(__file__).resolve().parent
+
 st.set_page_config(page_title="HABIT", page_icon="🏠", layout="wide")
 
-with open("assets/style.css", encoding="utf-8") as file:
+with (BASE_DIR / "assets" / "style.css").open(encoding="utf-8") as file:
     st.markdown(f"<style>{file.read()}</style>", unsafe_allow_html=True)
 if "home_result" not in st.session_state:
     st.session_state.home_result = None
@@ -146,6 +150,11 @@ elif page == "Maintenance":
     st.caption(
         "Upload a wall, ceiling, or surface image for visual defect detection."
     )
+    st.info(
+        "This is an experimental student model. Its current test accuracy is "
+        "about 56%, so treat the prediction as an initial visual reference, "
+        "not a professional building inspection."
+    )
     upload_col, result_col = st.columns(2, gap="large")
     with upload_col:
         with st.container(border=True):
@@ -184,7 +193,11 @@ elif page == "Maintenance":
                 st.caption(result["area"].upper())
                 st.markdown(f"### {result['label']}")
                 st.progress(result["confidence"])
-                st.caption(f"Confidence {result['confidence']:.0%}")
+                st.caption(f"Model confidence: {result['confidence']:.0%}")
+                st.caption(
+                    "Confidence is the model score for this prediction; it is not "
+                    "the same as verified real-world accuracy."
+                )
         with st.container(border=True):
             st.subheader("Maintenance Details")
             if result is None:
@@ -269,7 +282,11 @@ elif page == "Property Estimate":
                 st.markdown(
                     f"### Rp{result['min']:,.0f} – Rp{result['max']:,.0f}"
                 )
-                st.write(f"Validation MAE: Rp{result['mae']:,.0f}")
+                st.write(f"Test-set MAE: Rp{result['mae']:,.0f}")
+                st.caption(
+                    "Estimates are dataset-based references, not an official appraisal. "
+                    "Actual prices can vary by location, condition, and market timing."
+                )
 else:
     st.markdown("<p class='eyebrow'>HOME REPORT</p>", unsafe_allow_html=True)
     st.title("Home Report")

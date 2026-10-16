@@ -1,153 +1,51 @@
-# HABIT — Smart Home Living Assistant
+# HABIT — Smart Living Assistant
 
-HABIT is an AI-based application designed to help users understand a home's visual condition, identify visible maintenance issues, and estimate property prices using Indonesian housing data.
+HABIT is a student-built AI application that helps users explore home conditions, identify possible visible building defects, and estimate Indonesian property prices. It combines a pretrained image-classification model with models trained for this project in a Streamlit interface.
 
 > Computer Science Project — BINUS University, Semester 5
 
 LIVE APP : https://habit-project.streamlit.app/
+=======
+**Live demo:** https://habit-project.streamlit.app/  
+**Author:** Keanu Stadeva · Computer Science, BINUS University
+>>>>>>> 075fadb (Finalize HABIT smart living application)
 
----
-
-## Overview
-
-HABIT combines Deep Learning and Machine Learning in one simple Streamlit application.
-
-The project focuses on three main tasks:
-
-1. **Home Condition Analysis**
-2. **Maintenance Detection**
-3. **Indonesian Property Price Estimation**
-
-The final results can also be viewed together through the **Home Report** page.
-
----
+> HABIT is an educational prototype. Its outputs are estimates and visual predictions, not professional building inspections, structural assessments, or official property valuations.
 
 ## Features
 
-### Home Scan
-Users can upload several home images and select the area manually.
+### 1. Home Scan
+- Upload up to five JPG/PNG photos and select the area represented by each image.
+- Classify the visual condition using the pretrained `DejanX13/vit-house-classifier` model.
+- View per-image predictions, model scores, and an overall summary.
+- The model downloads from Hugging Face on first use and is cached during the app session.
 
-HABIT analyzes the visual condition of each image and returns:
+### 2. Maintenance Detection
+- Upload a photo of a wall, ceiling, or building surface.
+- A custom CNN predicts one of seven classes: algae, major crack, minor crack, peeling, plain/no clear defect, spalling, or stain.
+- Provides a short suggested follow-up check.
+- The current saved test metrics are approximately **56.0% accuracy** and **0.554 Macro F1**. Results should therefore be treated as preliminary and checked by a person.
 
-- overall home condition,
-- condition for each uploaded area,
-- prediction confidence,
-- short result details.
+### 3. Property Estimate
+- Enter province, housing category, land/building area, bedrooms, bathrooms, floors, and property type.
+- Predict a reference price and an estimated range using a regression pipeline trained on Indonesian housing data.
+- The training script compares HistGradientBoosting, Random Forest, and Gradient Boosting models and selects the model with the lowest validation MAE.
+- The included metrics file records 5,000 cleaned records and a held-out test R² of approximately **0.726** with MAE around **Rp151.9 million**. This is dataset-specific and does not guarantee accuracy for every region or property.
 
-### Maintenance Detection
-Users can upload an image of a wall, ceiling, or building surface.
+### 4. Home Report
+Shows the latest available results from Home Scan, Maintenance Detection, and Property Estimate in one summary.
 
-The model detects visible maintenance-related conditions such as:
+## Models and data sources
 
-- algae,
-- major crack,
-- minor crack,
-- peeling,
-- spalling,
-- stain,
-- no clear defect.
-
-### Property Estimate
-Users provide basic property information such as:
-
-- province,
-- housing category,
-- land area,
-- building area,
-- bedrooms,
-- bathrooms,
-- floors,
-- property type.
-
-The model returns:
-
-- estimated property price,
-- estimated price range.
-
-### Home Report
-The Home Report summarizes the latest results from:
-
-- Home Scan,
-- Maintenance Detection,
-- Property Estimate.
-
----
-
-## System Flow
-
-```text
-Home Images
-    ↓
-Pretrained ViT
-    ↓
-Home Condition
-
-
-Maintenance Image
-    ↓
-Custom CNN
-    ↓
-Maintenance Result
-
-
-Property Information
-    ↓
-Regression Model
-    ↓
-Estimated Price + Estimated Range
-```
-
----
-
-## AI / ML Models
-
-| Feature | Model | Type |
+| Feature | Model | Source / training approach |
 |---|---|---|
-| Home Scan | Pretrained ViT | Deep Learning |
-| Maintenance Detection | Custom CNN | Deep Learning |
-| Property Estimate | HistGradientBoostingRegressor | Machine Learning |
+| Home Scan | Vision Transformer image classifier | Pretrained Hugging Face model: [`DejanX13/vit-house-classifier`](https://huggingface.co/DejanX13/vit-house-classifier) |
+| Maintenance Detection | Custom CNN built with PyTorch | Fine-tuned from scratch using [`chandrabhuma/building_defect_vqa`](https://huggingface.co/datasets/chandrabhuma/building_defect_vqa) |
+| Property Estimate | Scikit-learn regression pipeline | Trained using [`web3hungry/indonesia-affordable-housing`](https://huggingface.co/datasets/web3hungry/indonesia-affordable-housing), limited to at most 5,000 cleaned records |
 
-### Pretrained Model
+The pretrained Home Scan model is not a model created from scratch by this project. The maintenance CNN architecture and property-estimation pipeline are implemented and trained by the project scripts. Dataset/model licenses and upstream changes should be reviewed before redistribution or commercial use.
 
-The **Home Scan** uses:
-
-```text
-DejanX13/vit-house-classifier
-```
-
-This model is already pretrained and does not need to be trained locally.
-
-### Models Trained for HABIT
-
-The following models are trained specifically for this project:
-
-```text
-Custom CNN
-→ Maintenance Detection
-```
-
-```text
-HistGradientBoostingRegressor
-→ Property Price Estimation
-```
-
----
-
-## Datasets
-
-The datasets are not stored directly inside the repository. They are downloaded through Hugging Face during training.
-
-| Dataset | Purpose | Source |
-|---|---|---|
-| `chandrabhuma/building_defect_vqa` | Maintenance Detection | Hugging Face |
-| `web3hungry/indonesia-affordable-housing` | Property Estimate | Hugging Face |
-| `DejanX13/vit-house-classifier` | Home Condition | Hugging Face pretrained model |
-
-For the Property Estimate model, HABIT uses a maximum of **5,000 cleaned records** so the training process remains practical for a student project and can still be run locally.
-
----
-
-## Project Structure
+## Project structure
 
 ```text
 HABIT/
@@ -162,125 +60,78 @@ HABIT/
 │   └── style.css
 └── models/
     ├── maintenance_cnn.pth
-    └── property_model.joblib
+    ├── maintenance_metrics.json
+    ├── property_model.joblib
+    └── property_metrics.json
 ```
 
----
+The saved model files are included in this project archive. If they are missing from a fresh checkout, run the relevant training script below. Training metrics are saved locally and are excluded by `.gitignore` so generated artifacts are not committed accidentally.
 
-## Installation
+## Requirements
 
-### 1. Create a Virtual Environment
+- Python 3.10 or newer is recommended.
+- Internet connection for downloading Hugging Face models/datasets.
+- PyTorch can run on CPU; a compatible CUDA setup can speed up training when available.
 
-```bash
+## Install and run locally
+
+Run these commands from the project folder.
+
+### Windows PowerShell
+
+```powershell
 python -m venv .venv
-```
-
-### 2. Activate the Virtual Environment
-
-Windows:
-
-```bash
-.venv\Scripts\activate
-```
-
-### 3. Install Dependencies
-
-```bash
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
 pip install -r requirements.txt
-```
-
----
-
-## Training
-
-### Maintenance Model
-
-```bash
-python train_maintenance.py
-```
-
-The trained model will be saved as:
-
-```text
-models/maintenance_cnn.pth
-```
-
-### Property Estimate Model
-
-```bash
-python train_property.py
-```
-
-The trained model will be saved as:
-
-```text
-models/property_model.joblib
-```
-
-The Home Scan model does not require local training because it uses a pretrained model.
-
----
-
-## Running the Application
-
-After the required models have been trained, run:
-
-```bash
 streamlit run app.py
 ```
 
-If the model files already exist inside the `models/` folder, the training scripts do not need to be run again.
+If PowerShell blocks environment activation, use Command Prompt instead:
 
----
+```cmd
+.venv\Scripts\activate.bat
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+Streamlit normally opens `http://localhost:8501` in your browser. Keep the terminal running while using the app.
+
+## Train the models
+
+Training is optional when the saved model files are already present.
+
+```bash
+python train_maintenance.py
+python train_property.py
+```
+
+The scripts download their datasets from Hugging Face and save model artifacts and evaluation metrics under `models/`. Training may take time and memory, particularly on CPU. Home Scan uses a pretrained model and does not need the local training scripts.
+
+## Evaluation and honest reporting
+
+- **Maintenance:** report both accuracy and Macro F1 because class performance can differ. The currently recorded test result is modest, so do not describe this model as highly accurate.
+- **Property Estimate:** use held-out test metrics (MAE, RMSE, R²) and the estimated-range coverage as measured by the training script. Errors are in Indonesian rupiah and can be large because property prices vary widely.
+- **Home Scan:** the displayed confidence is the model's prediction score, not a verified accuracy percentage. A model score of 90% does not mean that 90% of all real-world predictions are correct.
+- **Originality:** do not assign the whole application an arbitrary originality percentage. Describe the work accurately: a pretrained model is integrated for Home Scan, while the maintenance CNN and property pipeline are implemented/trained for this project.
 
 ## Limitations
 
-- **Home Scan is not specifically trained on Indonesian houses** — the pretrained model is still based on a more general housing dataset, so Indonesian housing characteristics may not always be represented well.
-- **Maintenance Detection depends on image quality** — lighting, camera angle, image distance, and surface visibility can affect the prediction.
-- **Property Estimate still requires improvement** — the estimated price may not always be close to the actual market price because the available input features are still limited.
-- **Estimated Range is not always consistent** — the range has been calibrated using validation residuals, but some predictions may still produce a range that is too wide or not close enough to the actual price.
-- **Property training is limited to a maximum of 5,000 cleaned records** — this keeps training practical, but it may reduce the representation of the wider Indonesian property market.
-- **Important property factors are still missing** — the current model does not directly include road access, nearby facilities, building age, detailed physical condition, or real-time market changes.
-- **HABIT is not intended for professional inspection or appraisal** — the results should be treated as an AI-assisted reference.
+- Predictions depend on the datasets, image quality, class balance, and input values used during development.
+- Maintenance predictions may miss defects or misclassify a surface; they are not a substitute for a qualified inspection.
+- Home Scan predicts broad visual categories and cannot establish structural safety.
+- Property estimates are data-driven references, not appraisals, and may not reflect current local market prices or unique property features.
+- The Home Report summarizes the latest results in the current session; it is not a permanent report database.
+- Internet access is needed the first time pretrained weights or training datasets are downloaded.
 
----
+## Troubleshooting
 
-## Future Work
+- **`ModuleNotFoundError`:** activate `.venv` and run `pip install -r requirements.txt`.
+- **Model file missing:** run the corresponding training script, or restore the model artifact from the project backup.
+- **Home Scan cannot download the model:** check internet access and the Hugging Face model page.
+- **Port 8501 is busy:** run `streamlit run app.py --server.port 8502` and open `http://localhost:8502`.
 
-- Improve the **Property Estimate** model through better feature engineering and comparison with other regression algorithms.
-- Improve the **Estimated Range** so that it is more stable and closer to actual property prices.
-- Add more Indonesian housing images to make **Home Scan** more relevant to local housing conditions.
-- Improve **Maintenance Detection** using more varied building-condition and lighting data.
-- Evaluate all models using a more representative test dataset.
-- Add more detailed location information, such as city or regency, if a suitable dataset becomes available.
-- Optimize inference performance for devices without a dedicated GPU.
+## License and attribution
 
----
-
-## Project Status
-
-The main HABIT workflow is already functional:
-
-```text
-Home Scan
-Maintenance Detection
-Property Estimate
-Home Report
-```
-
-However, the project still requires further improvement, especially in:
-
-- Property Estimate accuracy,
-- Estimated Range consistency,
-- Home Scan generalization,
-- Maintenance Detection generalization.
-
-HABIT is currently suitable as a Semester 5 Computer Science project and is still intended for further development and evaluation.
-
----
-
-## Author
-
-**Keanu Stadeva**
-
-**Computer Science**
+This repository integrates third-party datasets and a pretrained model. Check each upstream repository's license and terms before redistribution or commercial use. Add a project license only after confirming that the project code and included artifacts can legally be distributed under that license.

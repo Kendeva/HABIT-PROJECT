@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+BASE_DIR = Path(__file__).resolve().parent
+
 import joblib
 import numpy as np
 import pandas as pd
@@ -269,7 +271,7 @@ def main():
         & (actual <= upper_predictions)
     )
 
-    Path("models").mkdir(exist_ok=True)
+    (BASE_DIR / "models").mkdir(exist_ok=True)
 
     joblib.dump(
         {
@@ -281,7 +283,7 @@ def main():
             "range_coverage": float(coverage),
             "selected_model": selected_name,
         },
-        "models/property_model.joblib",
+        BASE_DIR / "models" / "property_model.joblib",
     )
 
     metrics = {
@@ -300,7 +302,7 @@ def main():
         },
     }
 
-    Path("models/property_metrics.json").write_text(
+    Path(BASE_DIR / "models" / "property_metrics.json").write_text(
         json.dumps(metrics, indent=2),
         encoding="utf-8",
     )

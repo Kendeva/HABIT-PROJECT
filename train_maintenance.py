@@ -2,6 +2,8 @@ import json
 from collections import Counter
 from pathlib import Path
 
+BASE_DIR = Path(__file__).resolve().parent
+
 import torch
 from torch import nn
 from torch.utils.data import Dataset, DataLoader
@@ -313,14 +315,14 @@ def main():
         device,
     )
 
-    Path("models").mkdir(exist_ok=True)
+    (BASE_DIR / "models").mkdir(exist_ok=True)
 
     torch.save(
         {
             "model_state": best_state,
             "labels": labels,
         },
-        "models/maintenance_cnn.pth",
+        BASE_DIR / "models" / "maintenance_cnn.pth",
     )
 
     metrics = {
@@ -334,7 +336,7 @@ def main():
     }
 
     Path(
-        "models/maintenance_metrics.json"
+        BASE_DIR / "models" / "maintenance_metrics.json"
     ).write_text(
         json.dumps(metrics, indent=2),
         encoding="utf-8",

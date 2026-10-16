@@ -9,9 +9,10 @@ from torch import nn
 from torchvision import transforms
 from transformers import pipeline
 
+BASE_DIR = Path(__file__).resolve().parent
 HOME_MODEL = "DejanX13/vit-house-classifier"
-MAINTENANCE_MODEL = Path("models/maintenance_cnn.pth")
-PROPERTY_MODEL = Path("models/property_model.joblib")
+MAINTENANCE_MODEL = BASE_DIR / "models" / "maintenance_cnn.pth"
+PROPERTY_MODEL = BASE_DIR / "models" / "property_model.joblib"
 
 PROPERTY_FEATURES = [
     "province",
